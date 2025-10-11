@@ -22,12 +22,49 @@ func (UnimplementedHandler) CreateProject(ctx context.Context, req *CreateProjec
 	return r, ht.ErrNotImplemented
 }
 
+// CreateRole implements createRole operation.
+//
+// Create a new role in a project.
+//
+// POST /v1alpha1/projects/{projectId}/roles
+func (UnimplementedHandler) CreateRole(ctx context.Context, req *CreateRoleRequest, params CreateRoleParams) (r CreateRoleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateUser implements createUser operation.
+//
+// Create a new user.
+// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+//
+// POST /v1alpha1/users
+func (UnimplementedHandler) CreateUser(ctx context.Context, req *CreateUserRequest) (r CreateUserRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateUserGroup implements createUserGroup operation.
+//
+// Create a new user group in a project.
+//
+// POST /v1alpha1/projects/{projectId}/usergroups
+func (UnimplementedHandler) CreateUserGroup(ctx context.Context, req *CreateUserGroupRequest, params CreateUserGroupParams) (r CreateUserGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetLivenessCheck implements getLivenessCheck operation.
 //
 // Check if the service is alive.
 //
 // GET /v1alpha1/health/liveness
 func (UnimplementedHandler) GetLivenessCheck(ctx context.Context) (r *HealthResponse, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetProject implements getProject operation.
+//
+// Retrieve a project by its ID.
+//
+// GET /v1alpha1/projects/{projectId}
+func (UnimplementedHandler) GetProject(ctx context.Context, params GetProjectParams) (r GetProjectRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -40,11 +77,83 @@ func (UnimplementedHandler) GetReadinessCheck(ctx context.Context) (r *HealthRes
 	return r, ht.ErrNotImplemented
 }
 
+// GetRole implements getRole operation.
+//
+// Retrieve a role by its ID in a project.
+//
+// GET /v1alpha1/projects/{projectId}/roles/{roleId}
+func (UnimplementedHandler) GetRole(ctx context.Context, params GetRoleParams) (r GetRoleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetUserGroup implements getUserGroup operation.
+//
+// Retrieve a user group by its ID in a project.
+//
+// GET /v1alpha1/projects/{projectId}/usergroups/{groupId}
+func (UnimplementedHandler) GetUserGroup(ctx context.Context, params GetUserGroupParams) (r GetUserGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListProjects implements listProjects operation.
 //
 // Retrieve a list of all projects.
 //
 // GET /v1alpha1/projects
 func (UnimplementedHandler) ListProjects(ctx context.Context, params ListProjectsParams) (r ListProjectsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRoles implements listRoles operation.
+//
+// Retrieve a list of all roles in a project.
+//
+// GET /v1alpha1/projects/{projectId}/roles
+func (UnimplementedHandler) ListRoles(ctx context.Context, params ListRolesParams) (r ListRolesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListUserGroups implements listUserGroups operation.
+//
+// Retrieve a list of all user groups in a project.
+//
+// GET /v1alpha1/projects/{projectId}/usergroups
+func (UnimplementedHandler) ListUserGroups(ctx context.Context, params ListUserGroupsParams) (r ListUserGroupsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListUsers implements listUsers operation.
+//
+// Retrieve a list of all users.
+//
+// GET /v1alpha1/users
+func (UnimplementedHandler) ListUsers(ctx context.Context, params ListUsersParams) (r ListUsersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateProject implements updateProject operation.
+//
+// Update an existing project.
+//
+// PUT /v1alpha1/projects/{projectId}
+func (UnimplementedHandler) UpdateProject(ctx context.Context, req *UpdateProjectRequest, params UpdateProjectParams) (r UpdateProjectRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateRole implements updateRole operation.
+//
+// Update an existing role in a project.
+//
+// PUT /v1alpha1/projects/{projectId}/roles/{roleId}
+func (UnimplementedHandler) UpdateRole(ctx context.Context, req *UpdateRoleRequest, params UpdateRoleParams) (r UpdateRoleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateUserGroup implements updateUserGroup operation.
+//
+// Update an existing user group in a project.
+//
+// PUT /v1alpha1/projects/{projectId}/usergroups/{groupId}
+func (UnimplementedHandler) UpdateUserGroup(ctx context.Context, req *UpdateUserGroupRequest, params UpdateUserGroupParams) (r UpdateUserGroupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

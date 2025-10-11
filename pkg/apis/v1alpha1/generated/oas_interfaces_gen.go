@@ -5,6 +5,54 @@ type CreateProjectRes interface {
 	createProjectRes()
 }
 
+type CreateRoleRes interface {
+	createRoleRes()
+}
+
+type CreateUserGroupRes interface {
+	createUserGroupRes()
+}
+
+type CreateUserRes interface {
+	createUserRes()
+}
+
+type GetProjectRes interface {
+	getProjectRes()
+}
+
+type GetRoleRes interface {
+	getRoleRes()
+}
+
+type GetUserGroupRes interface {
+	getUserGroupRes()
+}
+
 type ListProjectsRes interface {
 	listProjectsRes()
+}
+
+type ListRolesRes interface {
+	listRolesRes()
+}
+
+type ListUserGroupsRes interface {
+	listUserGroupsRes()
+}
+
+type ListUsersRes interface {
+	listUsersRes()
+}
+
+type UpdateProjectRes interface {
+	updateProjectRes()
+}
+
+type UpdateRoleRes interface {
+	updateRoleRes()
+}
+
+type UpdateUserGroupRes interface {
+	updateUserGroupRes()
 }

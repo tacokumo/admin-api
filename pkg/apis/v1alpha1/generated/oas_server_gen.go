@@ -14,24 +14,97 @@ type Handler interface {
 	//
 	// POST /v1alpha1/projects
 	CreateProject(ctx context.Context, req *CreateProjectRequest) (CreateProjectRes, error)
+	// CreateRole implements createRole operation.
+	//
+	// Create a new role in a project.
+	//
+	// POST /v1alpha1/projects/{projectId}/roles
+	CreateRole(ctx context.Context, req *CreateRoleRequest, params CreateRoleParams) (CreateRoleRes, error)
+	// CreateUser implements createUser operation.
+	//
+	// Create a new user.
+	// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+	//
+	// POST /v1alpha1/users
+	CreateUser(ctx context.Context, req *CreateUserRequest) (CreateUserRes, error)
+	// CreateUserGroup implements createUserGroup operation.
+	//
+	// Create a new user group in a project.
+	//
+	// POST /v1alpha1/projects/{projectId}/usergroups
+	CreateUserGroup(ctx context.Context, req *CreateUserGroupRequest, params CreateUserGroupParams) (CreateUserGroupRes, error)
 	// GetLivenessCheck implements getLivenessCheck operation.
 	//
 	// Check if the service is alive.
 	//
 	// GET /v1alpha1/health/liveness
 	GetLivenessCheck(ctx context.Context) (*HealthResponse, error)
+	// GetProject implements getProject operation.
+	//
+	// Retrieve a project by its ID.
+	//
+	// GET /v1alpha1/projects/{projectId}
+	GetProject(ctx context.Context, params GetProjectParams) (GetProjectRes, error)
 	// GetReadinessCheck implements getReadinessCheck operation.
 	//
 	// Check if the service is ready for receiving requests.
 	//
 	// GET /v1alpha1/health/readiness
 	GetReadinessCheck(ctx context.Context) (*HealthResponse, error)
+	// GetRole implements getRole operation.
+	//
+	// Retrieve a role by its ID in a project.
+	//
+	// GET /v1alpha1/projects/{projectId}/roles/{roleId}
+	GetRole(ctx context.Context, params GetRoleParams) (GetRoleRes, error)
+	// GetUserGroup implements getUserGroup operation.
+	//
+	// Retrieve a user group by its ID in a project.
+	//
+	// GET /v1alpha1/projects/{projectId}/usergroups/{groupId}
+	GetUserGroup(ctx context.Context, params GetUserGroupParams) (GetUserGroupRes, error)
 	// ListProjects implements listProjects operation.
 	//
 	// Retrieve a list of all projects.
 	//
 	// GET /v1alpha1/projects
 	ListProjects(ctx context.Context, params ListProjectsParams) (ListProjectsRes, error)
+	// ListRoles implements listRoles operation.
+	//
+	// Retrieve a list of all roles in a project.
+	//
+	// GET /v1alpha1/projects/{projectId}/roles
+	ListRoles(ctx context.Context, params ListRolesParams) (ListRolesRes, error)
+	// ListUserGroups implements listUserGroups operation.
+	//
+	// Retrieve a list of all user groups in a project.
+	//
+	// GET /v1alpha1/projects/{projectId}/usergroups
+	ListUserGroups(ctx context.Context, params ListUserGroupsParams) (ListUserGroupsRes, error)
+	// ListUsers implements listUsers operation.
+	//
+	// Retrieve a list of all users.
+	//
+	// GET /v1alpha1/users
+	ListUsers(ctx context.Context, params ListUsersParams) (ListUsersRes, error)
+	// UpdateProject implements updateProject operation.
+	//
+	// Update an existing project.
+	//
+	// PUT /v1alpha1/projects/{projectId}
+	UpdateProject(ctx context.Context, req *UpdateProjectRequest, params UpdateProjectParams) (UpdateProjectRes, error)
+	// UpdateRole implements updateRole operation.
+	//
+	// Update an existing role in a project.
+	//
+	// PUT /v1alpha1/projects/{projectId}/roles/{roleId}
+	UpdateRole(ctx context.Context, req *UpdateRoleRequest, params UpdateRoleParams) (UpdateRoleRes, error)
+	// UpdateUserGroup implements updateUserGroup operation.
+	//
+	// Update an existing user group in a project.
+	//
+	// PUT /v1alpha1/projects/{projectId}/usergroups/{groupId}
+	UpdateUserGroup(ctx context.Context, req *UpdateUserGroupRequest, params UpdateUserGroupParams) (UpdateUserGroupRes, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

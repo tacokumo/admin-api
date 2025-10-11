@@ -16,8 +16,12 @@ func (*CreateProjectInternalServerError) createProjectRes() {}
 
 // Ref: #/components/schemas/CreateProjectRequest
 type CreateProjectRequest struct {
-	Name string       `json:"name"`
-	Bio  OptNilString `json:"bio"`
+	Name        string    `json:"name"`
+	Description OptString `json:"description"`
+	// List of user IDs who will be owners of the project.
+	OwnerIds []string `json:"ownerIds"`
+	// List of user group IDs who will be owners of the project.
+	OwnerGroupIds []string `json:"ownerGroupIds"`
 }
 
 // GetName returns the value of Name.
@@ -25,9 +29,19 @@ func (s *CreateProjectRequest) GetName() string {
 	return s.Name
 }
 
-// GetBio returns the value of Bio.
-func (s *CreateProjectRequest) GetBio() OptNilString {
-	return s.Bio
+// GetDescription returns the value of Description.
+func (s *CreateProjectRequest) GetDescription() OptString {
+	return s.Description
+}
+
+// GetOwnerIds returns the value of OwnerIds.
+func (s *CreateProjectRequest) GetOwnerIds() []string {
+	return s.OwnerIds
+}
+
+// GetOwnerGroupIds returns the value of OwnerGroupIds.
+func (s *CreateProjectRequest) GetOwnerGroupIds() []string {
+	return s.OwnerGroupIds
 }
 
 // SetName sets the value of Name.
@@ -35,9 +49,141 @@ func (s *CreateProjectRequest) SetName(val string) {
 	s.Name = val
 }
 
-// SetBio sets the value of Bio.
-func (s *CreateProjectRequest) SetBio(val OptNilString) {
-	s.Bio = val
+// SetDescription sets the value of Description.
+func (s *CreateProjectRequest) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetOwnerIds sets the value of OwnerIds.
+func (s *CreateProjectRequest) SetOwnerIds(val []string) {
+	s.OwnerIds = val
+}
+
+// SetOwnerGroupIds sets the value of OwnerGroupIds.
+func (s *CreateProjectRequest) SetOwnerGroupIds(val []string) {
+	s.OwnerGroupIds = val
+}
+
+type CreateRoleBadRequest ErrorResponse
+
+func (*CreateRoleBadRequest) createRoleRes() {}
+
+type CreateRoleInternalServerError ErrorResponse
+
+func (*CreateRoleInternalServerError) createRoleRes() {}
+
+type CreateRoleNotFound ErrorResponse
+
+func (*CreateRoleNotFound) createRoleRes() {}
+
+// Ref: #/components/schemas/CreateRoleRequest
+type CreateRoleRequest struct {
+	Name         string    `json:"name"`
+	Description  OptString `json:"description"`
+	AttributeIds []string  `json:"attributeIds"`
+}
+
+// GetName returns the value of Name.
+func (s *CreateRoleRequest) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *CreateRoleRequest) GetDescription() OptString {
+	return s.Description
+}
+
+// GetAttributeIds returns the value of AttributeIds.
+func (s *CreateRoleRequest) GetAttributeIds() []string {
+	return s.AttributeIds
+}
+
+// SetName sets the value of Name.
+func (s *CreateRoleRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *CreateRoleRequest) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetAttributeIds sets the value of AttributeIds.
+func (s *CreateRoleRequest) SetAttributeIds(val []string) {
+	s.AttributeIds = val
+}
+
+type CreateUserBadRequest ErrorResponse
+
+func (*CreateUserBadRequest) createUserRes() {}
+
+type CreateUserGroupBadRequest ErrorResponse
+
+func (*CreateUserGroupBadRequest) createUserGroupRes() {}
+
+type CreateUserGroupInternalServerError ErrorResponse
+
+func (*CreateUserGroupInternalServerError) createUserGroupRes() {}
+
+type CreateUserGroupNotFound ErrorResponse
+
+func (*CreateUserGroupNotFound) createUserGroupRes() {}
+
+// Ref: #/components/schemas/CreateUserGroupRequest
+type CreateUserGroupRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// List of user IDs who will be members of the user group.
+	MemberIds []string `json:"memberIds"`
+}
+
+// GetName returns the value of Name.
+func (s *CreateUserGroupRequest) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *CreateUserGroupRequest) GetDescription() string {
+	return s.Description
+}
+
+// GetMemberIds returns the value of MemberIds.
+func (s *CreateUserGroupRequest) GetMemberIds() []string {
+	return s.MemberIds
+}
+
+// SetName sets the value of Name.
+func (s *CreateUserGroupRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *CreateUserGroupRequest) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetMemberIds sets the value of MemberIds.
+func (s *CreateUserGroupRequest) SetMemberIds(val []string) {
+	s.MemberIds = val
+}
+
+type CreateUserInternalServerError ErrorResponse
+
+func (*CreateUserInternalServerError) createUserRes() {}
+
+// Ref: #/components/schemas/CreateUserRequest
+type CreateUserRequest struct {
+	Email string `json:"email"`
+}
+
+// GetEmail returns the value of Email.
+func (s *CreateUserRequest) GetEmail() string {
+	return s.Email
+}
+
+// SetEmail sets the value of Email.
+func (s *CreateUserRequest) SetEmail(val string) {
+	s.Email = val
 }
 
 // Ref: #/components/schemas/ErrorResponse
@@ -56,6 +202,31 @@ func (s *ErrorResponse) SetError(val OptString) {
 }
 
 func (*ErrorResponse) listProjectsRes() {}
+func (*ErrorResponse) listUsersRes()    {}
+
+type GetProjectInternalServerError ErrorResponse
+
+func (*GetProjectInternalServerError) getProjectRes() {}
+
+type GetProjectNotFound ErrorResponse
+
+func (*GetProjectNotFound) getProjectRes() {}
+
+type GetRoleInternalServerError ErrorResponse
+
+func (*GetRoleInternalServerError) getRoleRes() {}
+
+type GetRoleNotFound ErrorResponse
+
+func (*GetRoleNotFound) getRoleRes() {}
+
+type GetUserGroupInternalServerError ErrorResponse
+
+func (*GetUserGroupInternalServerError) getUserGroupRes() {}
+
+type GetUserGroupNotFound ErrorResponse
+
+func (*GetUserGroupNotFound) getUserGroupRes() {}
 
 // Ref: #/components/schemas/HealthResponse
 type HealthResponse struct {
@@ -75,6 +246,34 @@ func (s *HealthResponse) SetStatus(val string) {
 type ListProjectsOKApplicationJSON []Project
 
 func (*ListProjectsOKApplicationJSON) listProjectsRes() {}
+
+type ListRolesInternalServerError ErrorResponse
+
+func (*ListRolesInternalServerError) listRolesRes() {}
+
+type ListRolesNotFound ErrorResponse
+
+func (*ListRolesNotFound) listRolesRes() {}
+
+type ListRolesOKApplicationJSON []Role
+
+func (*ListRolesOKApplicationJSON) listRolesRes() {}
+
+type ListUserGroupsInternalServerError ErrorResponse
+
+func (*ListUserGroupsInternalServerError) listUserGroupsRes() {}
+
+type ListUserGroupsNotFound ErrorResponse
+
+func (*ListUserGroupsNotFound) listUserGroupsRes() {}
+
+type ListUserGroupsOKApplicationJSON []UserGroup
+
+func (*ListUserGroupsOKApplicationJSON) listUserGroupsRes() {}
+
+type ListUsersOKApplicationJSON []User
+
+func (*ListUsersOKApplicationJSON) listUsersRes() {}
 
 // NewOptDateTime returns new OptDateTime with value set to v.
 func NewOptDateTime(v time.Time) OptDateTime {
@@ -116,69 +315,6 @@ func (o OptDateTime) Get() (v time.Time, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptDateTime) Or(d time.Time) time.Time {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptNilString returns new OptNilString with value set to v.
-func NewOptNilString(v string) OptNilString {
-	return OptNilString{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptNilString is optional nullable string.
-type OptNilString struct {
-	Value string
-	Set   bool
-	Null  bool
-}
-
-// IsSet returns true if OptNilString was set.
-func (o OptNilString) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptNilString) Reset() {
-	var v string
-	o.Value = v
-	o.Set = false
-	o.Null = false
-}
-
-// SetTo sets value to v.
-func (o *OptNilString) SetTo(v string) {
-	o.Set = true
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o OptNilString) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *OptNilString) SetToNull() {
-	o.Set = true
-	o.Null = true
-	var v string
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptNilString) Get() (v string, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptNilString) Or(d string) string {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -233,11 +369,11 @@ func (o OptString) Or(d string) string {
 
 // Ref: #/components/schemas/Project
 type Project struct {
-	ID        string       `json:"id"`
-	Name      string       `json:"name"`
-	Bio       OptNilString `json:"bio"`
-	CreatedAt OptDateTime  `json:"createdAt"`
-	UpdatedAt OptDateTime  `json:"updatedAt"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description OptString   `json:"description"`
+	CreatedAt   OptDateTime `json:"createdAt"`
+	UpdatedAt   OptDateTime `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -250,9 +386,9 @@ func (s *Project) GetName() string {
 	return s.Name
 }
 
-// GetBio returns the value of Bio.
-func (s *Project) GetBio() OptNilString {
-	return s.Bio
+// GetDescription returns the value of Description.
+func (s *Project) GetDescription() OptString {
+	return s.Description
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -275,9 +411,9 @@ func (s *Project) SetName(val string) {
 	s.Name = val
 }
 
-// SetBio sets the value of Bio.
-func (s *Project) SetBio(val OptNilString) {
-	s.Bio = val
+// SetDescription sets the value of Description.
+func (s *Project) SetDescription(val OptString) {
+	s.Description = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -291,3 +427,433 @@ func (s *Project) SetUpdatedAt(val OptDateTime) {
 }
 
 func (*Project) createProjectRes() {}
+func (*Project) getProjectRes()    {}
+func (*Project) updateProjectRes() {}
+
+// Ref: #/components/schemas/Role
+type Role struct {
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Description OptString       `json:"description"`
+	Project     Project         `json:"project"`
+	Attributes  []RoleAttribute `json:"attributes"`
+	CreatedAt   OptDateTime     `json:"createdAt"`
+	UpdatedAt   OptDateTime     `json:"updatedAt"`
+}
+
+// GetID returns the value of ID.
+func (s *Role) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *Role) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *Role) GetDescription() OptString {
+	return s.Description
+}
+
+// GetProject returns the value of Project.
+func (s *Role) GetProject() Project {
+	return s.Project
+}
+
+// GetAttributes returns the value of Attributes.
+func (s *Role) GetAttributes() []RoleAttribute {
+	return s.Attributes
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *Role) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *Role) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *Role) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *Role) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Role) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetProject sets the value of Project.
+func (s *Role) SetProject(val Project) {
+	s.Project = val
+}
+
+// SetAttributes sets the value of Attributes.
+func (s *Role) SetAttributes(val []RoleAttribute) {
+	s.Attributes = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *Role) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *Role) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+func (*Role) createRoleRes() {}
+func (*Role) getRoleRes()    {}
+func (*Role) updateRoleRes() {}
+
+// Ref: #/components/schemas/RoleAttribute
+type RoleAttribute struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// GetID returns the value of ID.
+func (s *RoleAttribute) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *RoleAttribute) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *RoleAttribute) GetDescription() string {
+	return s.Description
+}
+
+// SetID sets the value of ID.
+func (s *RoleAttribute) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *RoleAttribute) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *RoleAttribute) SetDescription(val string) {
+	s.Description = val
+}
+
+type UpdateProjectBadRequest ErrorResponse
+
+func (*UpdateProjectBadRequest) updateProjectRes() {}
+
+type UpdateProjectInternalServerError ErrorResponse
+
+func (*UpdateProjectInternalServerError) updateProjectRes() {}
+
+type UpdateProjectNotFound ErrorResponse
+
+func (*UpdateProjectNotFound) updateProjectRes() {}
+
+// Ref: #/components/schemas/UpdateProjectRequest
+type UpdateProjectRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// List of user IDs who will be owners of the project.
+	OwnerIds []string `json:"ownerIds"`
+	// List of user group IDs who will be owners of the project.
+	OwnerGroupIds []string `json:"ownerGroupIds"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateProjectRequest) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *UpdateProjectRequest) GetDescription() string {
+	return s.Description
+}
+
+// GetOwnerIds returns the value of OwnerIds.
+func (s *UpdateProjectRequest) GetOwnerIds() []string {
+	return s.OwnerIds
+}
+
+// GetOwnerGroupIds returns the value of OwnerGroupIds.
+func (s *UpdateProjectRequest) GetOwnerGroupIds() []string {
+	return s.OwnerGroupIds
+}
+
+// SetName sets the value of Name.
+func (s *UpdateProjectRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *UpdateProjectRequest) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetOwnerIds sets the value of OwnerIds.
+func (s *UpdateProjectRequest) SetOwnerIds(val []string) {
+	s.OwnerIds = val
+}
+
+// SetOwnerGroupIds sets the value of OwnerGroupIds.
+func (s *UpdateProjectRequest) SetOwnerGroupIds(val []string) {
+	s.OwnerGroupIds = val
+}
+
+type UpdateRoleBadRequest ErrorResponse
+
+func (*UpdateRoleBadRequest) updateRoleRes() {}
+
+type UpdateRoleInternalServerError ErrorResponse
+
+func (*UpdateRoleInternalServerError) updateRoleRes() {}
+
+type UpdateRoleNotFound ErrorResponse
+
+func (*UpdateRoleNotFound) updateRoleRes() {}
+
+// Ref: #/components/schemas/UpdateRoleRequest
+type UpdateRoleRequest struct {
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	AttributeIds []string `json:"attributeIds"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateRoleRequest) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *UpdateRoleRequest) GetDescription() string {
+	return s.Description
+}
+
+// GetAttributeIds returns the value of AttributeIds.
+func (s *UpdateRoleRequest) GetAttributeIds() []string {
+	return s.AttributeIds
+}
+
+// SetName sets the value of Name.
+func (s *UpdateRoleRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *UpdateRoleRequest) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetAttributeIds sets the value of AttributeIds.
+func (s *UpdateRoleRequest) SetAttributeIds(val []string) {
+	s.AttributeIds = val
+}
+
+type UpdateUserGroupBadRequest ErrorResponse
+
+func (*UpdateUserGroupBadRequest) updateUserGroupRes() {}
+
+type UpdateUserGroupInternalServerError ErrorResponse
+
+func (*UpdateUserGroupInternalServerError) updateUserGroupRes() {}
+
+type UpdateUserGroupNotFound ErrorResponse
+
+func (*UpdateUserGroupNotFound) updateUserGroupRes() {}
+
+// Ref: #/components/schemas/UpdateUserGroupRequest
+type UpdateUserGroupRequest struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	MemberIds   []string `json:"memberIds"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateUserGroupRequest) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *UpdateUserGroupRequest) GetDescription() string {
+	return s.Description
+}
+
+// GetMemberIds returns the value of MemberIds.
+func (s *UpdateUserGroupRequest) GetMemberIds() []string {
+	return s.MemberIds
+}
+
+// SetName sets the value of Name.
+func (s *UpdateUserGroupRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *UpdateUserGroupRequest) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetMemberIds sets the value of MemberIds.
+func (s *UpdateUserGroupRequest) SetMemberIds(val []string) {
+	s.MemberIds = val
+}
+
+// Ref: #/components/schemas/User
+type User struct {
+	ID        string      `json:"id"`
+	Email     string      `json:"email"`
+	Roles     []Role      `json:"roles"`
+	CreatedAt OptDateTime `json:"createdAt"`
+	UpdatedAt OptDateTime `json:"updatedAt"`
+}
+
+// GetID returns the value of ID.
+func (s *User) GetID() string {
+	return s.ID
+}
+
+// GetEmail returns the value of Email.
+func (s *User) GetEmail() string {
+	return s.Email
+}
+
+// GetRoles returns the value of Roles.
+func (s *User) GetRoles() []Role {
+	return s.Roles
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *User) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *User) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *User) SetID(val string) {
+	s.ID = val
+}
+
+// SetEmail sets the value of Email.
+func (s *User) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetRoles sets the value of Roles.
+func (s *User) SetRoles(val []Role) {
+	s.Roles = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *User) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *User) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+func (*User) createUserRes() {}
+
+// Ref: #/components/schemas/UserGroup
+type UserGroup struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Project     Project     `json:"project"`
+	Members     []User      `json:"members"`
+	CreatedAt   OptDateTime `json:"createdAt"`
+	UpdatedAt   OptDateTime `json:"updatedAt"`
+}
+
+// GetID returns the value of ID.
+func (s *UserGroup) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *UserGroup) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *UserGroup) GetDescription() string {
+	return s.Description
+}
+
+// GetProject returns the value of Project.
+func (s *UserGroup) GetProject() Project {
+	return s.Project
+}
+
+// GetMembers returns the value of Members.
+func (s *UserGroup) GetMembers() []User {
+	return s.Members
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *UserGroup) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *UserGroup) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *UserGroup) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *UserGroup) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *UserGroup) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetProject sets the value of Project.
+func (s *UserGroup) SetProject(val Project) {
+	s.Project = val
+}
+
+// SetMembers sets the value of Members.
+func (s *UserGroup) SetMembers(val []User) {
+	s.Members = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *UserGroup) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *UserGroup) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+func (*UserGroup) createUserGroupRes() {}
+func (*UserGroup) getUserGroupRes()    {}
+func (*UserGroup) updateUserGroupRes() {}

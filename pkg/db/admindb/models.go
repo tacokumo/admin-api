@@ -8,16 +8,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type TacokumoAdminAccount struct {
-	ID        int64
-	Email     string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
 type TacokumoAdminAccountIdentity struct {
 	ID            int64
-	AccountID     int64
+	UserID        int64
 	EmailVerified bool
 	Issuer        string
 	Sub           string
@@ -25,18 +18,89 @@ type TacokumoAdminAccountIdentity struct {
 	UpdatedAt     pgtype.Timestamptz
 }
 
-type TacokumoAdminProject struct {
+type TacokumoAdminGithubAccount struct {
 	ID        int64
-	Name      pgtype.Text
-	Bio       pgtype.Text
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 }
 
-type TacokumoAdminProjectAccountRelationship struct {
+type TacokumoAdminProject struct {
+	ID          int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TacokumoAdminProjectOwner struct {
 	ID        int64
 	ProjectID int64
-	AccountID int64
+	UserID    int64
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+}
+
+type TacokumoAdminRole struct {
+	ID          int64
+	ProjectID   int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TacokumoAdminRoleAttribute struct {
+	ID          int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TacokumoAdminRoleAttributesRelation struct {
+	ID              int64
+	RoleID          int64
+	RoleAttributeID int64
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type TacokumoAdminUser struct {
+	ID        int64
+	Email     string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type TacokumoAdminUserRoleRelation struct {
+	ID        int64
+	UserID    int64
+	RoleID    int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type TacokumoAdminUserUsergroupsRelation struct {
+	ID          int64
+	UserID      int64
+	UsergroupID int64
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TacokumoAdminUsergroup struct {
+	ID          int64
+	ProjectID   int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type TacokumoAdminUsergroupRoleRelation struct {
+	ID          int64
+	UsergroupID int64
+	RoleID      int64
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
 }

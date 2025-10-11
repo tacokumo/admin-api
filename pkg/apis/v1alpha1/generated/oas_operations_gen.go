@@ -7,7 +7,19 @@ type OperationName = string
 
 const (
 	CreateProjectOperation     OperationName = "CreateProject"
+	CreateRoleOperation        OperationName = "CreateRole"
+	CreateUserOperation        OperationName = "CreateUser"
+	CreateUserGroupOperation   OperationName = "CreateUserGroup"
 	GetLivenessCheckOperation  OperationName = "GetLivenessCheck"
+	GetProjectOperation        OperationName = "GetProject"
 	GetReadinessCheckOperation OperationName = "GetReadinessCheck"
+	GetRoleOperation           OperationName = "GetRole"
+	GetUserGroupOperation      OperationName = "GetUserGroup"
 	ListProjectsOperation      OperationName = "ListProjects"
+	ListRolesOperation         OperationName = "ListRoles"
+	ListUserGroupsOperation    OperationName = "ListUserGroups"
+	ListUsersOperation         OperationName = "ListUsers"
+	UpdateProjectOperation     OperationName = "UpdateProject"
+	UpdateRoleOperation        OperationName = "UpdateRole"
+	UpdateUserGroupOperation   OperationName = "UpdateUserGroup"
 )

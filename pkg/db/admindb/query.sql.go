@@ -7,31 +7,7 @@ package admindb
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const checkAccountExists = `-- name: CheckAccountExists :one
-SELECT EXISTS (
-  SELECT 1
-  FROM tacokumo_admin.accounts
-  WHERE email = $1
-)
-`
-
-// CheckAccountExists
-//
-//	SELECT EXISTS (
-//	  SELECT 1
-//	  FROM tacokumo_admin.accounts
-//	  WHERE email = $1
-//	)
-func (q *Queries) CheckAccountExists(ctx context.Context, email string) (bool, error) {
-	row := q.db.QueryRow(ctx, checkAccountExists, email)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
 
 const checkDBConnection = `-- name: CheckDBConnection :one
 SELECT 1
@@ -48,40 +24,40 @@ func (q *Queries) CheckDBConnection(ctx context.Context) (int32, error) {
 }
 
 const createProject = `-- name: CreateProject :exec
-INSERT INTO tacokumo_admin.projects (name, bio) VALUES ($1, $2)
+INSERT INTO tacokumo_admin.projects (name, description) VALUES ($1, $2)
 `
 
 type CreateProjectParams struct {
-	Name pgtype.Text
-	Bio  pgtype.Text
+	Name        string
+	Description string
 }
 
 // CreateProject
 //
-//	INSERT INTO tacokumo_admin.projects (name, bio) VALUES ($1, $2)
+//	INSERT INTO tacokumo_admin.projects (name, description) VALUES ($1, $2)
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) error {
-	_, err := q.db.Exec(ctx, createProject, arg.Name, arg.Bio)
+	_, err := q.db.Exec(ctx, createProject, arg.Name, arg.Description)
 	return err
 }
 
 const getProjectByName = `-- name: GetProjectByName :one
-SELECT id, name, bio, created_at, updated_at
+SELECT id, name, description, created_at, updated_at
 FROM tacokumo_admin.projects
 WHERE name = $1
 `
 
 // GetProjectByName
 //
-//	SELECT id, name, bio, created_at, updated_at
+//	SELECT id, name, description, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	WHERE name = $1
-func (q *Queries) GetProjectByName(ctx context.Context, name pgtype.Text) (TacokumoAdminProject, error) {
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAdminProject, error) {
 	row := q.db.QueryRow(ctx, getProjectByName, name)
 	var i TacokumoAdminProject
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Bio,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -89,7 +65,7 @@ func (q *Queries) GetProjectByName(ctx context.Context, name pgtype.Text) (Tacok
 }
 
 const listProjectsWithPagination = `-- name: ListProjectsWithPagination :many
-SELECT id, name, bio, created_at, updated_at
+SELECT id, name, description, created_at, updated_at
 FROM tacokumo_admin.projects
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -102,7 +78,7 @@ type ListProjectsWithPaginationParams struct {
 
 // ListProjectsWithPagination
 //
-//	SELECT id, name, bio, created_at, updated_at
+//	SELECT id, name, description, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	ORDER BY created_at DESC
 //	LIMIT $1 OFFSET $2
@@ -118,7 +94,7 @@ func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjec
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Bio,
+			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
