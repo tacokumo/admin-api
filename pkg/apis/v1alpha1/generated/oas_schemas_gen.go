@@ -16,8 +16,8 @@ func (*CreateProjectInternalServerError) createProjectRes() {}
 
 // Ref: #/components/schemas/CreateProjectRequest
 type CreateProjectRequest struct {
-	Name        string    `json:"name"`
-	Description OptString `json:"description"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 	// List of user IDs who will be owners of the project.
 	OwnerIds []string `json:"ownerIds"`
 	// List of user group IDs who will be owners of the project.
@@ -30,7 +30,7 @@ func (s *CreateProjectRequest) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *CreateProjectRequest) GetDescription() OptString {
+func (s *CreateProjectRequest) GetDescription() string {
 	return s.Description
 }
 
@@ -50,7 +50,7 @@ func (s *CreateProjectRequest) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *CreateProjectRequest) SetDescription(val OptString) {
+func (s *CreateProjectRequest) SetDescription(val string) {
 	s.Description = val
 }
 
@@ -78,9 +78,9 @@ func (*CreateRoleNotFound) createRoleRes() {}
 
 // Ref: #/components/schemas/CreateRoleRequest
 type CreateRoleRequest struct {
-	Name         string    `json:"name"`
-	Description  OptString `json:"description"`
-	AttributeIds []string  `json:"attributeIds"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	AttributeIds []string `json:"attributeIds"`
 }
 
 // GetName returns the value of Name.
@@ -89,7 +89,7 @@ func (s *CreateRoleRequest) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *CreateRoleRequest) GetDescription() OptString {
+func (s *CreateRoleRequest) GetDescription() string {
 	return s.Description
 }
 
@@ -104,7 +104,7 @@ func (s *CreateRoleRequest) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *CreateRoleRequest) SetDescription(val OptString) {
+func (s *CreateRoleRequest) SetDescription(val string) {
 	s.Description = val
 }
 
@@ -188,16 +188,16 @@ func (s *CreateUserRequest) SetEmail(val string) {
 
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
-	Error OptString `json:"error"`
+	Error string `json:"error"`
 }
 
 // GetError returns the value of Error.
-func (s *ErrorResponse) GetError() OptString {
+func (s *ErrorResponse) GetError() string {
 	return s.Error
 }
 
 // SetError sets the value of Error.
-func (s *ErrorResponse) SetError(val OptString) {
+func (s *ErrorResponse) SetError(val string) {
 	s.Error = val
 }
 
@@ -275,105 +275,13 @@ type ListUsersOKApplicationJSON []User
 
 func (*ListUsersOKApplicationJSON) listUsersRes() {}
 
-// NewOptDateTime returns new OptDateTime with value set to v.
-func NewOptDateTime(v time.Time) OptDateTime {
-	return OptDateTime{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptDateTime is optional time.Time.
-type OptDateTime struct {
-	Value time.Time
-	Set   bool
-}
-
-// IsSet returns true if OptDateTime was set.
-func (o OptDateTime) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptDateTime) Reset() {
-	var v time.Time
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptDateTime) SetTo(v time.Time) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptDateTime) Get() (v time.Time, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptDateTime) Or(d time.Time) time.Time {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptString returns new OptString with value set to v.
-func NewOptString(v string) OptString {
-	return OptString{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptString is optional string.
-type OptString struct {
-	Value string
-	Set   bool
-}
-
-// IsSet returns true if OptString was set.
-func (o OptString) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptString) Reset() {
-	var v string
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptString) SetTo(v string) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptString) Get() (v string, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptString) Or(d string) string {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // Ref: #/components/schemas/Project
 type Project struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description OptString   `json:"description"`
-	CreatedAt   OptDateTime `json:"createdAt"`
-	UpdatedAt   OptDateTime `json:"updatedAt"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -387,17 +295,17 @@ func (s *Project) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *Project) GetDescription() OptString {
+func (s *Project) GetDescription() string {
 	return s.Description
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *Project) GetCreatedAt() OptDateTime {
+func (s *Project) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *Project) GetUpdatedAt() OptDateTime {
+func (s *Project) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
@@ -412,17 +320,17 @@ func (s *Project) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *Project) SetDescription(val OptString) {
+func (s *Project) SetDescription(val string) {
 	s.Description = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *Project) SetCreatedAt(val OptDateTime) {
+func (s *Project) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *Project) SetUpdatedAt(val OptDateTime) {
+func (s *Project) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
@@ -434,11 +342,11 @@ func (*Project) updateProjectRes() {}
 type Role struct {
 	ID          string          `json:"id"`
 	Name        string          `json:"name"`
-	Description OptString       `json:"description"`
+	Description string          `json:"description"`
 	Project     Project         `json:"project"`
 	Attributes  []RoleAttribute `json:"attributes"`
-	CreatedAt   OptDateTime     `json:"createdAt"`
-	UpdatedAt   OptDateTime     `json:"updatedAt"`
+	CreatedAt   time.Time       `json:"createdAt"`
+	UpdatedAt   time.Time       `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -452,7 +360,7 @@ func (s *Role) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *Role) GetDescription() OptString {
+func (s *Role) GetDescription() string {
 	return s.Description
 }
 
@@ -467,12 +375,12 @@ func (s *Role) GetAttributes() []RoleAttribute {
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *Role) GetCreatedAt() OptDateTime {
+func (s *Role) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *Role) GetUpdatedAt() OptDateTime {
+func (s *Role) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
@@ -487,7 +395,7 @@ func (s *Role) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *Role) SetDescription(val OptString) {
+func (s *Role) SetDescription(val string) {
 	s.Description = val
 }
 
@@ -502,12 +410,12 @@ func (s *Role) SetAttributes(val []RoleAttribute) {
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *Role) SetCreatedAt(val OptDateTime) {
+func (s *Role) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *Role) SetUpdatedAt(val OptDateTime) {
+func (s *Role) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
@@ -714,11 +622,11 @@ func (s *UpdateUserGroupRequest) SetMemberIds(val []string) {
 
 // Ref: #/components/schemas/User
 type User struct {
-	ID        string      `json:"id"`
-	Email     string      `json:"email"`
-	Roles     []Role      `json:"roles"`
-	CreatedAt OptDateTime `json:"createdAt"`
-	UpdatedAt OptDateTime `json:"updatedAt"`
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Roles     []Role    `json:"roles"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -737,12 +645,12 @@ func (s *User) GetRoles() []Role {
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *User) GetCreatedAt() OptDateTime {
+func (s *User) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *User) GetUpdatedAt() OptDateTime {
+func (s *User) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
@@ -762,12 +670,12 @@ func (s *User) SetRoles(val []Role) {
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *User) SetCreatedAt(val OptDateTime) {
+func (s *User) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *User) SetUpdatedAt(val OptDateTime) {
+func (s *User) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
@@ -775,13 +683,13 @@ func (*User) createUserRes() {}
 
 // Ref: #/components/schemas/UserGroup
 type UserGroup struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Project     Project     `json:"project"`
-	Members     []User      `json:"members"`
-	CreatedAt   OptDateTime `json:"createdAt"`
-	UpdatedAt   OptDateTime `json:"updatedAt"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Project     Project   `json:"project"`
+	Members     []User    `json:"members"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -810,12 +718,12 @@ func (s *UserGroup) GetMembers() []User {
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *UserGroup) GetCreatedAt() OptDateTime {
+func (s *UserGroup) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *UserGroup) GetUpdatedAt() OptDateTime {
+func (s *UserGroup) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
@@ -845,12 +753,12 @@ func (s *UserGroup) SetMembers(val []User) {
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *UserGroup) SetCreatedAt(val OptDateTime) {
+func (s *UserGroup) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *UserGroup) SetUpdatedAt(val OptDateTime) {
+func (s *UserGroup) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 

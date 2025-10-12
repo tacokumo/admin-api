@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/cockroachdb/errors"
-	"github.com/jackc/pgx/v5/pgtype"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
 	"github.com/tacokumo/admin-api/pkg/db/admindb"
 )
@@ -16,28 +15,86 @@ type Service struct {
 	queries *admindb.Queries
 }
 
+// CreateRole implements generated.Handler.
+func (s *Service) CreateRole(ctx context.Context, req *adminv1alpha1.CreateRoleRequest, params adminv1alpha1.CreateRoleParams) (adminv1alpha1.CreateRoleRes, error) {
+	panic("unimplemented")
+}
+
+// CreateUser implements generated.Handler.
+func (s *Service) CreateUser(ctx context.Context, req *adminv1alpha1.CreateUserRequest) (adminv1alpha1.CreateUserRes, error) {
+	panic("unimplemented")
+}
+
+// CreateUserGroup implements generated.Handler.
+func (s *Service) CreateUserGroup(ctx context.Context, req *adminv1alpha1.CreateUserGroupRequest, params adminv1alpha1.CreateUserGroupParams) (adminv1alpha1.CreateUserGroupRes, error) {
+	panic("unimplemented")
+}
+
+// GetProject implements generated.Handler.
+func (s *Service) GetProject(ctx context.Context, params adminv1alpha1.GetProjectParams) (adminv1alpha1.GetProjectRes, error) {
+	panic("unimplemented")
+}
+
+// GetRole implements generated.Handler.
+func (s *Service) GetRole(ctx context.Context, params adminv1alpha1.GetRoleParams) (adminv1alpha1.GetRoleRes, error) {
+	panic("unimplemented")
+}
+
+// GetUserGroup implements generated.Handler.
+func (s *Service) GetUserGroup(ctx context.Context, params adminv1alpha1.GetUserGroupParams) (adminv1alpha1.GetUserGroupRes, error) {
+	panic("unimplemented")
+}
+
+// ListRoles implements generated.Handler.
+func (s *Service) ListRoles(ctx context.Context, params adminv1alpha1.ListRolesParams) (adminv1alpha1.ListRolesRes, error) {
+	panic("unimplemented")
+}
+
+// ListUserGroups implements generated.Handler.
+func (s *Service) ListUserGroups(ctx context.Context, params adminv1alpha1.ListUserGroupsParams) (adminv1alpha1.ListUserGroupsRes, error) {
+	panic("unimplemented")
+}
+
+// ListUsers implements generated.Handler.
+func (s *Service) ListUsers(ctx context.Context, params adminv1alpha1.ListUsersParams) (adminv1alpha1.ListUsersRes, error) {
+	panic("unimplemented")
+}
+
+// UpdateProject implements generated.Handler.
+func (s *Service) UpdateProject(ctx context.Context, req *adminv1alpha1.UpdateProjectRequest, params adminv1alpha1.UpdateProjectParams) (adminv1alpha1.UpdateProjectRes, error) {
+	panic("unimplemented")
+}
+
+// UpdateRole implements generated.Handler.
+func (s *Service) UpdateRole(ctx context.Context, req *adminv1alpha1.UpdateRoleRequest, params adminv1alpha1.UpdateRoleParams) (adminv1alpha1.UpdateRoleRes, error) {
+	panic("unimplemented")
+}
+
+// UpdateUserGroup implements generated.Handler.
+func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.UpdateUserGroupRequest, params adminv1alpha1.UpdateUserGroupParams) (adminv1alpha1.UpdateUserGroupRes, error) {
+	panic("unimplemented")
+}
+
 // CreateProject implements generated.Handler.
 func (s *Service) CreateProject(ctx context.Context, req *adminv1alpha1.CreateProjectRequest) (adminv1alpha1.CreateProjectRes, error) {
 	createProjectParams := admindb.CreateProjectParams{
-		Name: pgtype.Text{String: req.Name, Valid: true},
-	}
-	if !req.Bio.Null {
-		createProjectParams.Bio = pgtype.Text{String: req.Bio.Value, Valid: true}
+		Name:        req.Name,
+		Description: req.Description,
 	}
 	if err := s.queries.CreateProject(ctx, createProjectParams); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	proj, err := s.queries.GetProjectByName(ctx, pgtype.Text{String: req.Name, Valid: true})
+	proj, err := s.queries.GetProjectByName(ctx, req.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &adminv1alpha1.Project{
-		ID:        strconv.Itoa(int(proj.ID)),
-		Name:      proj.Name.String,
-		Bio:       adminv1alpha1.NewOptNilString(proj.Bio.String),
-		CreatedAt: adminv1alpha1.NewOptDateTime(proj.CreatedAt.Time),
-		UpdatedAt: adminv1alpha1.NewOptDateTime(proj.UpdatedAt.Time),
+		ID:          strconv.Itoa(int(proj.ID)),
+		Name:        proj.Name,
+		Description: proj.Description,
+		CreatedAt:   proj.CreatedAt.Time,
+		UpdatedAt:   proj.UpdatedAt.Time,
 	}, nil
 }
 
@@ -54,11 +111,11 @@ func (s *Service) ListProjects(ctx context.Context, params adminv1alpha1.ListPro
 	res := make(adminv1alpha1.ListProjectsOKApplicationJSON, 0, len(projects))
 	for _, p := range projects {
 		res = append(res, adminv1alpha1.Project{
-			ID:        strconv.Itoa(int(p.ID)),
-			Name:      p.Name.String,
-			Bio:       adminv1alpha1.NewOptNilString(p.Bio.String),
-			CreatedAt: adminv1alpha1.NewOptDateTime(p.CreatedAt.Time),
-			UpdatedAt: adminv1alpha1.NewOptDateTime(p.UpdatedAt.Time),
+			ID:          strconv.Itoa(int(p.ID)),
+			Name:        p.Name,
+			Description: p.Description,
+			CreatedAt:   p.CreatedAt.Time,
+			UpdatedAt:   p.UpdatedAt.Time,
 		})
 	}
 

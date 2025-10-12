@@ -26,6 +26,22 @@ func LoadFromEnv[T any]() (T, error) {
 	return cfg, nil
 }
 
+// OverrideFromEnv overrides struct fields from environment variables based on `env` struct tags.
+// Only overrides fields where the environment variable is set.
+// Accepts a pointer to any struct type and returns an error if the type is not supported.
+func OverrideFromEnv[T any](cfg *T) error {
+	value := reflect.ValueOf(cfg).Elem()
+	if value.Kind() != reflect.Struct {
+		return errors.New("envconfig: OverrideFromEnv requires pointer to struct type")
+	}
+
+	if err := loadFromEnvRecursive(value); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func loadFromEnvRecursive(v reflect.Value) error {
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)

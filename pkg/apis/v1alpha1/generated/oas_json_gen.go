@@ -5,7 +5,6 @@ package generated
 import (
 	"math/bits"
 	"strconv"
-	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -104,30 +103,24 @@ func (s *CreateProjectRequest) encodeFields(e *jx.Encoder) {
 		e.Str(s.Name)
 	}
 	{
-		if s.Description.Set {
-			e.FieldStart("description")
-			s.Description.Encode(e)
-		}
+		e.FieldStart("description")
+		e.Str(s.Description)
 	}
 	{
-		if s.OwnerIds != nil {
-			e.FieldStart("ownerIds")
-			e.ArrStart()
-			for _, elem := range s.OwnerIds {
-				e.Str(elem)
-			}
-			e.ArrEnd()
+		e.FieldStart("ownerIds")
+		e.ArrStart()
+		for _, elem := range s.OwnerIds {
+			e.Str(elem)
 		}
+		e.ArrEnd()
 	}
 	{
-		if s.OwnerGroupIds != nil {
-			e.FieldStart("ownerGroupIds")
-			e.ArrStart()
-			for _, elem := range s.OwnerGroupIds {
-				e.Str(elem)
-			}
-			e.ArrEnd()
+		e.FieldStart("ownerGroupIds")
+		e.ArrStart()
+		for _, elem := range s.OwnerGroupIds {
+			e.Str(elem)
 		}
+		e.ArrEnd()
 	}
 }
 
@@ -160,9 +153,11 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "description":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.Description.Reset()
-				if err := s.Description.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -170,6 +165,7 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "ownerIds":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				s.OwnerIds = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -189,6 +185,7 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"ownerIds\"")
 			}
 		case "ownerGroupIds":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				s.OwnerGroupIds = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -217,7 +214,7 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000001,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -391,20 +388,16 @@ func (s *CreateRoleRequest) encodeFields(e *jx.Encoder) {
 		e.Str(s.Name)
 	}
 	{
-		if s.Description.Set {
-			e.FieldStart("description")
-			s.Description.Encode(e)
-		}
+		e.FieldStart("description")
+		e.Str(s.Description)
 	}
 	{
-		if s.AttributeIds != nil {
-			e.FieldStart("attributeIds")
-			e.ArrStart()
-			for _, elem := range s.AttributeIds {
-				e.Str(elem)
-			}
-			e.ArrEnd()
+		e.FieldStart("attributeIds")
+		e.ArrStart()
+		for _, elem := range s.AttributeIds {
+			e.Str(elem)
 		}
+		e.ArrEnd()
 	}
 }
 
@@ -436,9 +429,11 @@ func (s *CreateRoleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "description":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.Description.Reset()
-				if err := s.Description.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -446,6 +441,7 @@ func (s *CreateRoleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "attributeIds":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				s.AttributeIds = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -474,7 +470,7 @@ func (s *CreateRoleRequest) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000001,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -958,10 +954,8 @@ func (s *ErrorResponse) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ErrorResponse) encodeFields(e *jx.Encoder) {
 	{
-		if s.Error.Set {
-			e.FieldStart("error")
-			s.Error.Encode(e)
-		}
+		e.FieldStart("error")
+		e.Str(s.Error)
 	}
 }
 
@@ -974,13 +968,16 @@ func (s *ErrorResponse) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ErrorResponse to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
 		case "error":
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Error.Reset()
-				if err := s.Error.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Error = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -993,6 +990,38 @@ func (s *ErrorResponse) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ErrorResponse")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfErrorResponse) {
+					name = jsonFieldsNameOfErrorResponse[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -1687,76 +1716,6 @@ func (s *ListUsersOKApplicationJSON) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes time.Time as json.
-func (o OptDateTime) Encode(e *jx.Encoder, format func(*jx.Encoder, time.Time)) {
-	if !o.Set {
-		return
-	}
-	format(e, o.Value)
-}
-
-// Decode decodes time.Time from json.
-func (o *OptDateTime) Decode(d *jx.Decoder, format func(*jx.Decoder) (time.Time, error)) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptDateTime to nil")
-	}
-	o.Set = true
-	v, err := format(d)
-	if err != nil {
-		return err
-	}
-	o.Value = v
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptDateTime) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e, json.EncodeDateTime)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptDateTime) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d, json.DecodeDateTime)
-}
-
-// Encode encodes string as json.
-func (o OptString) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes string from json.
-func (o *OptString) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptString to nil")
-	}
-	o.Set = true
-	v, err := d.Str()
-	if err != nil {
-		return err
-	}
-	o.Value = string(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptString) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptString) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode implements json.Marshaler.
 func (s *Project) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -1775,22 +1734,16 @@ func (s *Project) encodeFields(e *jx.Encoder) {
 		e.Str(s.Name)
 	}
 	{
-		if s.Description.Set {
-			e.FieldStart("description")
-			s.Description.Encode(e)
-		}
+		e.FieldStart("description")
+		e.Str(s.Description)
 	}
 	{
-		if s.CreatedAt.Set {
-			e.FieldStart("createdAt")
-			s.CreatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("createdAt")
+		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		if s.UpdatedAt.Set {
-			e.FieldStart("updatedAt")
-			s.UpdatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("updatedAt")
+		json.EncodeDateTime(e, s.UpdatedAt)
 	}
 }
 
@@ -1836,9 +1789,11 @@ func (s *Project) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "description":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Description.Reset()
-				if err := s.Description.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -1846,9 +1801,11 @@ func (s *Project) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
 		case "createdAt":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.CreatedAt.Reset()
-				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -1856,9 +1813,11 @@ func (s *Project) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"createdAt\"")
 			}
 		case "updatedAt":
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				s.UpdatedAt.Reset()
-				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.UpdatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -1875,7 +1834,7 @@ func (s *Project) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -1939,36 +1898,28 @@ func (s *Role) encodeFields(e *jx.Encoder) {
 		e.Str(s.Name)
 	}
 	{
-		if s.Description.Set {
-			e.FieldStart("description")
-			s.Description.Encode(e)
-		}
+		e.FieldStart("description")
+		e.Str(s.Description)
 	}
 	{
 		e.FieldStart("project")
 		s.Project.Encode(e)
 	}
 	{
-		if s.Attributes != nil {
-			e.FieldStart("attributes")
-			e.ArrStart()
-			for _, elem := range s.Attributes {
-				elem.Encode(e)
-			}
-			e.ArrEnd()
+		e.FieldStart("attributes")
+		e.ArrStart()
+		for _, elem := range s.Attributes {
+			elem.Encode(e)
 		}
+		e.ArrEnd()
 	}
 	{
-		if s.CreatedAt.Set {
-			e.FieldStart("createdAt")
-			s.CreatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("createdAt")
+		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		if s.UpdatedAt.Set {
-			e.FieldStart("updatedAt")
-			s.UpdatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("updatedAt")
+		json.EncodeDateTime(e, s.UpdatedAt)
 	}
 }
 
@@ -2016,9 +1967,11 @@ func (s *Role) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "description":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Description.Reset()
-				if err := s.Description.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -2036,6 +1989,7 @@ func (s *Role) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"project\"")
 			}
 		case "attributes":
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.Attributes = make([]RoleAttribute, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -2053,9 +2007,11 @@ func (s *Role) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attributes\"")
 			}
 		case "createdAt":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				s.CreatedAt.Reset()
-				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -2063,9 +2019,11 @@ func (s *Role) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"createdAt\"")
 			}
 		case "updatedAt":
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
-				s.UpdatedAt.Reset()
-				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.UpdatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -2082,7 +2040,7 @@ func (s *Role) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001011,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -3081,16 +3039,12 @@ func (s *User) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		if s.CreatedAt.Set {
-			e.FieldStart("createdAt")
-			s.CreatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("createdAt")
+		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		if s.UpdatedAt.Set {
-			e.FieldStart("updatedAt")
-			s.UpdatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("updatedAt")
+		json.EncodeDateTime(e, s.UpdatedAt)
 	}
 }
 
@@ -3154,9 +3108,11 @@ func (s *User) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"roles\"")
 			}
 		case "createdAt":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				s.CreatedAt.Reset()
-				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3164,9 +3120,11 @@ func (s *User) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"createdAt\"")
 			}
 		case "updatedAt":
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				s.UpdatedAt.Reset()
-				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.UpdatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3183,7 +3141,7 @@ func (s *User) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -3263,16 +3221,12 @@ func (s *UserGroup) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		if s.CreatedAt.Set {
-			e.FieldStart("createdAt")
-			s.CreatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("createdAt")
+		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		if s.UpdatedAt.Set {
-			e.FieldStart("updatedAt")
-			s.UpdatedAt.Encode(e, json.EncodeDateTime)
-		}
+		e.FieldStart("updatedAt")
+		json.EncodeDateTime(e, s.UpdatedAt)
 	}
 }
 
@@ -3360,9 +3314,11 @@ func (s *UserGroup) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"members\"")
 			}
 		case "createdAt":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				s.CreatedAt.Reset()
-				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3370,9 +3326,11 @@ func (s *UserGroup) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"createdAt\"")
 			}
 		case "updatedAt":
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
-				s.UpdatedAt.Reset()
-				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
+				v, err := json.DecodeDateTime(d)
+				s.UpdatedAt = v
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3389,7 +3347,7 @@ func (s *UserGroup) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00011111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
