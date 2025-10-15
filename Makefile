@@ -1,5 +1,8 @@
 .PHONY: all
-all: generate format test build lint 
+all: generate format test build lint
+
+.PHONY: test-all
+test-all: test scenario-test
 
 .PHONY: format
 format:
@@ -8,6 +11,10 @@ format:
 .PHONY: test
 test:
 	go test -v ./...
+
+.PHONY: scenario-test
+scenario-test:
+	go tool ginkgo -vv ./test/scenario
 
 .PHONY: build
 build:
