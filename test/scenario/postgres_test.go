@@ -46,7 +46,7 @@ func createPostgreSQLContainer(
 func applySchemaWithAtlas(
 	ctx context.Context,
 	postgresContainer *testcontainers.DockerContainer,
-) error {
+) (err error) {
 	// Get network to connect atlas container to the same network as postgres
 	networks, err := postgresContainer.Networks(ctx)
 	if err != nil {
@@ -94,7 +94,9 @@ func applySchemaWithAtlas(
 	if err != nil {
 		return fmt.Errorf("failed to run atlas: %w", err)
 	}
-	defer atlasContainer.Terminate(ctx)
+	defer func() {
+		err = atlasContainer.Terminate(ctx)
+	}()
 
 	return nil
 }
