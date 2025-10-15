@@ -18,6 +18,7 @@ func TestAPIs(t *testing.T) {
 var testCtx context.Context
 var cancelFn context.CancelFunc
 var postgreSQLContainer *testcontainers.DockerContainer
+
 var _ = BeforeSuite(func() {
 	ctx, cancel := context.WithCancel(context.Background())
 	testCtx = ctx
@@ -30,6 +31,9 @@ var _ = BeforeSuite(func() {
 	pc, err := createPostgreSQLContainer(ctx)
 	Expect(err).Should(Succeed())
 	postgreSQLContainer = pc
+
+	err = applySchemaWithAtlas(ctx, postgreSQLContainer)
+	Expect(err).Should(Succeed())
 })
 
 var _ = AfterSuite(func() {

@@ -56,7 +56,7 @@ services:
     volumes:
       - ./develop/tacokumo_admin_db:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d tacokumo_admin_db"]
+      test: ["CMD-SHELL", "pg_isready -U admin_api -d tacokumo_admin_db"]
       interval: 5s
       timeout: 5s
       retries: 5

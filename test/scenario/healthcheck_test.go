@@ -1,8 +1,9 @@
-package scenario
+package scenario_test
 
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	. "github.com/onsi/ginkgo/v2"
@@ -15,12 +16,19 @@ import (
 var _ = Describe("v1alpha liveness check", func() {
 	var pgxPool *pgxpool.Pool
 	BeforeEach(func(ctx context.Context) {
+		host, err := postgreSQLContainer.Host(ctx)
+		Expect(err).Should(Succeed())
+
+		// Get the dynamically mapped port
+		mappedPort, err := postgreSQLContainer.MappedPort(ctx, "5432")
+		Expect(err).Should(Succeed())
+
 		pgConfig := pg.Config{
-			Host:     "localhost",
-			Port:     5432,
-			User:     "user",
+			Host:     host,
+			Port:     mappedPort.Int(),
+			User:     "admin_api",
 			Password: "password",
-			DBName:   "admindb",
+			DBName:   "tacokumo_admin_db",
 			SSLMode:  "disable",
 		}
 		pgxConfig, err := pgxpool.ParseConfig(pgConfig.DSN())
@@ -28,12 +36,19 @@ var _ = Describe("v1alpha liveness check", func() {
 
 		p, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 		Expect(err).Should(Succeed())
+
+		Eventually(func(ctx context.Context) error {
+			err := p.Ping(ctx)
+			return err
+		}).WithContext(ctx).WithTimeout(10 * time.Second).WithPolling(1 * time.Second).Should(Succeed())
 		pgxPool = p
 
 	})
 
 	AfterEach(func() {
-		pgxPool.Close()
+		if pgxPool != nil {
+			pgxPool.Close()
+		}
 	})
 
 	It("should return ok", func(ctx context.Context) {

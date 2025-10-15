@@ -14,6 +14,7 @@ func createPostgreSQLContainer(
 ) (*testcontainers.DockerContainer, error) {
 	container, err := testcontainers.Run(
 		ctx, "postgres:18.0",
+		testcontainers.WithLogger(&SlogForTestContainers{}),
 		testcontainers.WithExposedPorts("5432/tcp"),
 		testcontainers.WithEnv(map[string]string{
 			"POSTGRES_PASSWORD": "password",
@@ -31,8 +32,7 @@ func createPostgreSQLContainer(
 			},
 		),
 		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
+			wait.ForExec([]string{"pg_isready", "-U", "admin_api", "-d", "tacokumo_admin_db"}).
 				WithPollInterval(5*time.Second).
 				WithStartupTimeout(25*time.Second),
 		),
