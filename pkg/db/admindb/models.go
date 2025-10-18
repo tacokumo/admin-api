@@ -28,6 +28,7 @@ type TacokumoAdminProject struct {
 	ID          int64
 	Name        string
 	Description string
+	Kind        string
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 }

@@ -11,7 +11,7 @@ func Logger(logger *slog.Logger) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			err := next(c)
 			if err != nil {
-				c.Error(err)
+				logger.ErrorContext(c.Request().Context(), "Error", slog.String("error", err.Error()))
 			}
 			logger.Info("request completed",
 				slog.String("method", c.Request().Method),

@@ -16,7 +16,6 @@ require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/ogen-go/ogen v1.14.0
 	github.com/onsi/ginkgo/v2 v2.26.0

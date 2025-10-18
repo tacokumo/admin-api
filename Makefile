@@ -19,6 +19,7 @@ scenario-test:
 .PHONY: build
 build:
 	go build -o bin/server ./cmd/server
+	go build -o bin/client ./cmd/client
 
 .PHONY: docker-compose-up
 docker-compose-up:

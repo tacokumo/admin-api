@@ -7,6 +7,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
+	"github.com/tacokumo/admin-api/pkg/apis/v1alpha1/validator"
 	"github.com/tacokumo/admin-api/pkg/db/admindb"
 )
 
@@ -77,6 +78,9 @@ func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.Update
 
 // CreateProject implements generated.Handler.
 func (s *Service) CreateProject(ctx context.Context, req *adminv1alpha1.CreateProjectRequest) (adminv1alpha1.CreateProjectRes, error) {
+	if err := validator.PreValidateProjectCreate(ctx, s.logger); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	createProjectParams := admindb.CreateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,

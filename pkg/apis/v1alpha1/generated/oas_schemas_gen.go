@@ -4,6 +4,8 @@ package generated
 
 import (
 	"time"
+
+	"github.com/go-faster/errors"
 )
 
 type CreateProjectBadRequest ErrorResponse
@@ -277,11 +279,12 @@ func (*ListUsersOKApplicationJSON) listUsersRes() {}
 
 // Ref: #/components/schemas/Project
 type Project struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Kind        ProjectKind `json:"kind"`
+	CreatedAt   time.Time   `json:"createdAt"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
 }
 
 // GetID returns the value of ID.
@@ -297,6 +300,11 @@ func (s *Project) GetName() string {
 // GetDescription returns the value of Description.
 func (s *Project) GetDescription() string {
 	return s.Description
+}
+
+// GetKind returns the value of Kind.
+func (s *Project) GetKind() ProjectKind {
+	return s.Kind
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -324,6 +332,11 @@ func (s *Project) SetDescription(val string) {
 	s.Description = val
 }
 
+// SetKind sets the value of Kind.
+func (s *Project) SetKind(val ProjectKind) {
+	s.Kind = val
+}
+
 // SetCreatedAt sets the value of CreatedAt.
 func (s *Project) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
@@ -337,6 +350,47 @@ func (s *Project) SetUpdatedAt(val time.Time) {
 func (*Project) createProjectRes() {}
 func (*Project) getProjectRes()    {}
 func (*Project) updateProjectRes() {}
+
+type ProjectKind string
+
+const (
+	ProjectKindPersonal ProjectKind = "personal"
+	ProjectKindShared   ProjectKind = "shared"
+)
+
+// AllValues returns all ProjectKind values.
+func (ProjectKind) AllValues() []ProjectKind {
+	return []ProjectKind{
+		ProjectKindPersonal,
+		ProjectKindShared,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProjectKind) MarshalText() ([]byte, error) {
+	switch s {
+	case ProjectKindPersonal:
+		return []byte(s), nil
+	case ProjectKindShared:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProjectKind) UnmarshalText(data []byte) error {
+	switch ProjectKind(data) {
+	case ProjectKindPersonal:
+		*s = ProjectKindPersonal
+		return nil
+	case ProjectKindShared:
+		*s = ProjectKindShared
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/Role
 type Role struct {

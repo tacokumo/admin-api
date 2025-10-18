@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
-	"github.com/tacokumo/admin-api/pkg/a0/management"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1"
 	adminv1alpha1generated "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
 	"github.com/tacokumo/admin-api/pkg/config"
@@ -44,23 +43,16 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 		cfg:    cfg,
 		e:      echo.New(),
 	}
-	a0ManagementClient, err := management.NewDefaultClient(ctx, cfg.Auth.Auth0Domain, cfg.Auth.Auth0ClientID, cfg.Auth.Auth0ClientSecret)
-	if err != nil {
-		return s, errors.WithStack(err)
-	}
+
 	// Setup
 	s.e.Use(middleware.Logger(logger))
 	corsConfig := setupCORSConfig(cfg)
 	s.e.Use(echomiddleware.CORSWithConfig(corsConfig))
-	jwtValidateMiddleware, err := middleware.JWTMiddleware(cfg.Auth.Auth0Domain, 5*time.Minute, []string{cfg.Auth.Auth0Audience})
+	jwtValidateMiddleware, err := middleware.JWTMiddleware(logger, cfg.Auth.Auth0Domain, 5*time.Minute, []string{cfg.Auth.Auth0Audience})
 	if err != nil {
 		return s, errors.WithStack(err)
 	}
 	s.e.Use(jwtValidateMiddleware)
-	s.e.Use(middleware.AuthZ(logger, a0ManagementClient, middleware.WithExclusionURLPrefixes([]string{
-		"/v1alpha1/health/liveness",
-		"/v1alpha1/health/readiness",
-	})))
 
 	opts, cleanups, err := initAdminServerConfig(ctx, logger)
 	if err != nil {

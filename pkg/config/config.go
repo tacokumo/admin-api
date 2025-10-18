@@ -18,11 +18,11 @@ type Config struct {
 }
 
 type AuthConfig struct {
-	Auth0Domain   string `env:"AUTH0_DOMAIN" yaml:"auth0_domain"`
-	Auth0Audience string `env:"AUTH0_AUDIENCE" yaml:"auth0_audience"`
-	Auth0ClientID string `env:"AUTH0_CLIENT_ID" yaml:"auth0_client_id"`
+	Auth0Domain   string `env:"AUTH0_DOMAIN" yaml:"domain"`
+	Auth0Audience string `env:"AUTH0_AUDIENCE" yaml:"audience"`
+	Auth0ClientID string `env:"AUTH0_CLIENT_ID" yaml:"client_id"`
 	// Auth0ClientSecret is required only when you use Management API.
-	Auth0ClientSecret string `env:"AUTH0_CLIENT_SECRET" yaml:"auth0_client_secret"`
+	Auth0ClientSecret string `env:"AUTH0_CLIENT_SECRET" yaml:"client_secret"`
 }
 
 type AdminDBConfig struct {

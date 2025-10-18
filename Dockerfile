@@ -1,4 +1,4 @@
-FROM golang:1.25
+FROM golang:1.25 AS builder
 WORKDIR /src
 
 COPY ./go.mod ./
@@ -12,5 +12,7 @@ COPY ./pkg ./pkg
 RUN CGO_ENABLED=0 go build -o /server ./cmd/server
 
 FROM scratch
-COPY --from=0 /server /server
+# CA証明書をコピー
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /server /server
 CMD ["/server"]

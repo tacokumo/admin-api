@@ -7,6 +7,8 @@ package admindb
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const checkDBConnection = `-- name: CheckDBConnection :one
@@ -46,14 +48,22 @@ FROM tacokumo_admin.projects
 WHERE name = $1
 `
 
+type GetProjectByNameRow struct {
+	ID          int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
 // GetProjectByName
 //
 //	SELECT id, name, description, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	WHERE name = $1
-func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAdminProject, error) {
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (GetProjectByNameRow, error) {
 	row := q.db.QueryRow(ctx, getProjectByName, name)
-	var i TacokumoAdminProject
+	var i GetProjectByNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -76,21 +86,29 @@ type ListProjectsWithPaginationParams struct {
 	Offset int32
 }
 
+type ListProjectsWithPaginationRow struct {
+	ID          int64
+	Name        string
+	Description string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
 // ListProjectsWithPagination
 //
 //	SELECT id, name, description, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	ORDER BY created_at DESC
 //	LIMIT $1 OFFSET $2
-func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjectsWithPaginationParams) ([]TacokumoAdminProject, error) {
+func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjectsWithPaginationParams) ([]ListProjectsWithPaginationRow, error) {
 	rows, err := q.db.Query(ctx, listProjectsWithPagination, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TacokumoAdminProject
+	var items []ListProjectsWithPaginationRow
 	for rows.Next() {
-		var i TacokumoAdminProject
+		var i ListProjectsWithPaginationRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

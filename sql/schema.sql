@@ -6,6 +6,7 @@ CREATE TABLE tacokumo_admin.projects (
   id   BIGSERIAL PRIMARY KEY, -- ひとまず主キーはBIGSERIALで、UUIDv7に移行することもあるかもしれない
   name VARCHAR(64) NOT NULL, -- プロジェクト名
   description VARCHAR(256) NOT NULL, -- プロジェクトの説明 
+  kind VARCHAR(32) NOT NULL DEFAULT 'personal', -- プロジェクトの種類 (将来的に複数種類をサポートする場合に備えて)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (name) -- プロジェクト名はユニーク
