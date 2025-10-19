@@ -78,12 +78,18 @@ func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.Update
 
 // CreateProject implements generated.Handler.
 func (s *Service) CreateProject(ctx context.Context, req *adminv1alpha1.CreateProjectRequest) (adminv1alpha1.CreateProjectRes, error) {
-	if err := validator.PreValidateProjectCreate(ctx, s.logger); err != nil {
+	projObj := adminv1alpha1.Project{
+		Name:        req.Name,
+		Description: req.Description,
+		Kind:        adminv1alpha1.ProjectKind(req.Kind),
+	}
+	if err := validator.PreValidateProjectCreate(ctx, s.logger, &projObj); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	createProjectParams := admindb.CreateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
+		Kind:        string(req.Kind),
 	}
 	if err := s.queries.CreateProject(ctx, createProjectParams); err != nil {
 		return nil, errors.WithStack(err)

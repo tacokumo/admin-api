@@ -53,6 +53,7 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 			reqBody := generated.CreateProjectRequest{
 				Name:          "example-project",
 				Description:   "the example project",
+				Kind:          generated.CreateProjectRequestKind(generated.ProjectKindPersonal),
 				OwnerIds:      []string{},
 				OwnerGroupIds: []string{},
 			}
@@ -65,7 +66,6 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			fmt.Println(v)
 			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", v.AccessToken))
 			req.Header.Add("Content-Type", "application/json")
 
@@ -86,7 +86,7 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode != http.StatusCreated {
 				return errors.Newf("unexpected status code: %d, body: %s", resp.StatusCode, respBody.String())
 			}
 			logger.InfoContext(cmd.Context(), "project created successfully", "response", respBody.String())

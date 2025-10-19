@@ -7,8 +7,6 @@ package admindb
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const checkDBConnection = `-- name: CheckDBConnection :one
@@ -26,48 +24,42 @@ func (q *Queries) CheckDBConnection(ctx context.Context) (int32, error) {
 }
 
 const createProject = `-- name: CreateProject :exec
-INSERT INTO tacokumo_admin.projects (name, description) VALUES ($1, $2)
+INSERT INTO tacokumo_admin.projects (name, description, kind) VALUES ($1, $2, $3)
 `
 
 type CreateProjectParams struct {
 	Name        string
 	Description string
+	Kind        string
 }
 
 // CreateProject
 //
-//	INSERT INTO tacokumo_admin.projects (name, description) VALUES ($1, $2)
+//	INSERT INTO tacokumo_admin.projects (name, description, kind) VALUES ($1, $2, $3)
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) error {
-	_, err := q.db.Exec(ctx, createProject, arg.Name, arg.Description)
+	_, err := q.db.Exec(ctx, createProject, arg.Name, arg.Description, arg.Kind)
 	return err
 }
 
 const getProjectByName = `-- name: GetProjectByName :one
-SELECT id, name, description, created_at, updated_at
+SELECT id, name, description, kind, created_at, updated_at
 FROM tacokumo_admin.projects
 WHERE name = $1
 `
 
-type GetProjectByNameRow struct {
-	ID          int64
-	Name        string
-	Description string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-}
-
 // GetProjectByName
 //
-//	SELECT id, name, description, created_at, updated_at
+//	SELECT id, name, description, kind, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	WHERE name = $1
-func (q *Queries) GetProjectByName(ctx context.Context, name string) (GetProjectByNameRow, error) {
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAdminProject, error) {
 	row := q.db.QueryRow(ctx, getProjectByName, name)
-	var i GetProjectByNameRow
+	var i TacokumoAdminProject
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.Kind,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -75,7 +67,7 @@ func (q *Queries) GetProjectByName(ctx context.Context, name string) (GetProject
 }
 
 const listProjectsWithPagination = `-- name: ListProjectsWithPagination :many
-SELECT id, name, description, created_at, updated_at
+SELECT id, name, description, kind, created_at, updated_at
 FROM tacokumo_admin.projects
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -86,33 +78,26 @@ type ListProjectsWithPaginationParams struct {
 	Offset int32
 }
 
-type ListProjectsWithPaginationRow struct {
-	ID          int64
-	Name        string
-	Description string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-}
-
 // ListProjectsWithPagination
 //
-//	SELECT id, name, description, created_at, updated_at
+//	SELECT id, name, description, kind, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	ORDER BY created_at DESC
 //	LIMIT $1 OFFSET $2
-func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjectsWithPaginationParams) ([]ListProjectsWithPaginationRow, error) {
+func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjectsWithPaginationParams) ([]TacokumoAdminProject, error) {
 	rows, err := q.db.Query(ctx, listProjectsWithPagination, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProjectsWithPaginationRow
+	var items []TacokumoAdminProject
 	for rows.Next() {
-		var i ListProjectsWithPaginationRow
+		var i TacokumoAdminProject
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.Kind,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

@@ -18,8 +18,9 @@ func (*CreateProjectInternalServerError) createProjectRes() {}
 
 // Ref: #/components/schemas/CreateProjectRequest
 type CreateProjectRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	Kind        CreateProjectRequestKind `json:"kind"`
 	// List of user IDs who will be owners of the project.
 	OwnerIds []string `json:"ownerIds"`
 	// List of user group IDs who will be owners of the project.
@@ -34,6 +35,11 @@ func (s *CreateProjectRequest) GetName() string {
 // GetDescription returns the value of Description.
 func (s *CreateProjectRequest) GetDescription() string {
 	return s.Description
+}
+
+// GetKind returns the value of Kind.
+func (s *CreateProjectRequest) GetKind() CreateProjectRequestKind {
+	return s.Kind
 }
 
 // GetOwnerIds returns the value of OwnerIds.
@@ -56,6 +62,11 @@ func (s *CreateProjectRequest) SetDescription(val string) {
 	s.Description = val
 }
 
+// SetKind sets the value of Kind.
+func (s *CreateProjectRequest) SetKind(val CreateProjectRequestKind) {
+	s.Kind = val
+}
+
 // SetOwnerIds sets the value of OwnerIds.
 func (s *CreateProjectRequest) SetOwnerIds(val []string) {
 	s.OwnerIds = val
@@ -64,6 +75,47 @@ func (s *CreateProjectRequest) SetOwnerIds(val []string) {
 // SetOwnerGroupIds sets the value of OwnerGroupIds.
 func (s *CreateProjectRequest) SetOwnerGroupIds(val []string) {
 	s.OwnerGroupIds = val
+}
+
+type CreateProjectRequestKind string
+
+const (
+	CreateProjectRequestKindPersonal CreateProjectRequestKind = "personal"
+	CreateProjectRequestKindShared   CreateProjectRequestKind = "shared"
+)
+
+// AllValues returns all CreateProjectRequestKind values.
+func (CreateProjectRequestKind) AllValues() []CreateProjectRequestKind {
+	return []CreateProjectRequestKind{
+		CreateProjectRequestKindPersonal,
+		CreateProjectRequestKindShared,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateProjectRequestKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateProjectRequestKindPersonal:
+		return []byte(s), nil
+	case CreateProjectRequestKindShared:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateProjectRequestKind) UnmarshalText(data []byte) error {
+	switch CreateProjectRequestKind(data) {
+	case CreateProjectRequestKindPersonal:
+		*s = CreateProjectRequestKindPersonal
+		return nil
+	case CreateProjectRequestKindShared:
+		*s = CreateProjectRequestKindShared
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type CreateRoleBadRequest ErrorResponse

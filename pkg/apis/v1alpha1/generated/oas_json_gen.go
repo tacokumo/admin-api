@@ -107,6 +107,10 @@ func (s *CreateProjectRequest) encodeFields(e *jx.Encoder) {
 		e.Str(s.Description)
 	}
 	{
+		e.FieldStart("kind")
+		s.Kind.Encode(e)
+	}
+	{
 		e.FieldStart("ownerIds")
 		e.ArrStart()
 		for _, elem := range s.OwnerIds {
@@ -124,11 +128,12 @@ func (s *CreateProjectRequest) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCreateProjectRequest = [4]string{
+var jsonFieldsNameOfCreateProjectRequest = [5]string{
 	0: "name",
 	1: "description",
-	2: "ownerIds",
-	3: "ownerGroupIds",
+	2: "kind",
+	3: "ownerIds",
+	4: "ownerGroupIds",
 }
 
 // Decode decodes CreateProjectRequest from json.
@@ -164,8 +169,18 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"description\"")
 			}
-		case "ownerIds":
+		case "kind":
 			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "ownerIds":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				s.OwnerIds = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -185,7 +200,7 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"ownerIds\"")
 			}
 		case "ownerGroupIds":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.OwnerGroupIds = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -214,7 +229,7 @@ func (s *CreateProjectRequest) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -256,6 +271,46 @@ func (s *CreateProjectRequest) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateProjectRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateProjectRequestKind as json.
+func (s CreateProjectRequestKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CreateProjectRequestKind from json.
+func (s *CreateProjectRequestKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateProjectRequestKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CreateProjectRequestKind(v) {
+	case CreateProjectRequestKindPersonal:
+		*s = CreateProjectRequestKindPersonal
+	case CreateProjectRequestKindShared:
+		*s = CreateProjectRequestKindShared
+	default:
+		*s = CreateProjectRequestKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CreateProjectRequestKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateProjectRequestKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

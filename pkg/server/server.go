@@ -32,9 +32,10 @@ import (
 )
 
 type Server struct {
-	logger *slog.Logger
-	cfg    config.Config
-	e      *echo.Echo
+	logger   *slog.Logger
+	cfg      config.Config
+	e        *echo.Echo
+	cleanups []func(context.Context)
 }
 
 func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, error) {
@@ -58,9 +59,6 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	for _, cleanup := range cleanups {
-		defer cleanup(ctx)
-	}
 
 	adminDBConfig := pg.Config{
 		Host:     cfg.AdminDBConfig.Host,
@@ -80,7 +78,9 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	if err != nil {
 		return s, errors.WithStack(err)
 	}
-	defer p.Close()
+	cleanups = append(cleanups, func(ctx context.Context) {
+		p.Close()
+	})
 
 	retryCount := 1
 	if cfg.AdminDBConfig.InitialConnRetry > 1 {
@@ -116,6 +116,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	v1alphaGroup := s.e.Group("/v1alpha1")
 	v1alphaGroup.Any("/*", echo.WrapHandler(v1alpha1Service))
 
+	s.cleanups = cleanups
 	return s, nil
 }
 
@@ -135,6 +136,10 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	wg.Wait()
+
+	for _, cleanup := range s.cleanups {
+		cleanup(ctx)
+	}
 	return nil
 }
 
