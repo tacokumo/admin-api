@@ -1,18 +1,15 @@
 package cmd
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/cockroachdb/errors"
 	"github.com/spf13/cobra"
 	"github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
-	"github.com/tacokumo/admin-api/pkg/client/auth"
+	"github.com/tacokumo/admin-api/pkg/client/v1alpha1"
 )
 
 func newProjectCommand(logger *slog.Logger) *cobra.Command {
@@ -30,68 +27,57 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 	c := &cobra.Command{
 		Use: "create",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			logger.DebugContext(cmd.Context(), "trying to retrieve auth0 token")
-			// Implementation for project creation goes here
-			v, err := auth.RetrieveToken(os.Getenv("AUTH0_DOMAIN"), os.Getenv("AUTH0_CLIENT_ID"), os.Getenv("AUTH0_CLIENT_SECRET"), os.Getenv("AUTH0_AUDIENCE"))
-			if err != nil {
-				return errors.WithStack(err)
-			}
-
-			serverHost := os.Getenv("SERVER_HOST")
-			if serverHost == "" {
-				serverHost = "localhost"
-			}
-			serverURL := fmt.Sprintf("https://%s:8444", serverHost)
 			transport := &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true,
 				},
 			}
-			client := &http.Client{
-				Transport: transport,
+			client := v1alpha1.NewDefaultClient(http.Client{Transport: transport})
+
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if name == "" {
+				return errors.New("name is required")
+			}
+			description, err := cmd.Flags().GetString("description")
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			kind, err := cmd.Flags().GetString("kind")
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			ownerIds, err := cmd.Flags().GetStringSlice("owner-ids")
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			ownerGroupIds, err := cmd.Flags().GetStringSlice("owner-group-ids")
+			if err != nil {
+				return errors.WithStack(err)
 			}
 			reqBody := generated.CreateProjectRequest{
-				Name:          "example-project",
-				Description:   "the example project",
-				Kind:          generated.CreateProjectRequestKind(generated.ProjectKindPersonal),
-				OwnerIds:      []string{},
-				OwnerGroupIds: []string{},
+				Name:          name,
+				Description:   description,
+				Kind:          generated.CreateProjectRequestKind(kind),
+				OwnerIds:      ownerIds,
+				OwnerGroupIds: ownerGroupIds,
 			}
-			reqBodyBytes, err := json.Marshal(reqBody)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			endpoint := fmt.Sprintf("%s/v1alpha1/projects", serverURL)
-			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, endpoint, bytes.NewReader(reqBodyBytes))
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", v.AccessToken))
-			req.Header.Add("Content-Type", "application/json")
 
-			logger.DebugContext(cmd.Context(), "sending request to create project")
-			resp, err := client.Do(req)
-			if err != nil {
+			if err := client.CreateProject(cmd.Context(), &reqBody); err != nil {
 				return errors.WithStack(err)
 			}
-			defer func() {
-				if e := resp.Body.Close(); e != nil && err == nil {
-					err = errors.WithStack(e)
-				}
-			}()
 
-			logger.DebugContext(cmd.Context(), "trying to read body from response")
-			respBody := &bytes.Buffer{}
-			_, err = respBody.ReadFrom(resp.Body)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if resp.StatusCode != http.StatusCreated {
-				return errors.Newf("unexpected status code: %d, body: %s", resp.StatusCode, respBody.String())
-			}
-			logger.InfoContext(cmd.Context(), "project created successfully", "response", respBody.String())
+			fmt.Println("project created successfullly")
 			return nil
 		},
 	}
+
+	c.Flags().String("name", "project", "プロジェクト名")
+	c.Flags().String("description", "the sample project", "プロジェクトの説明")
+	c.Flags().StringSlice("owner-ids", []string{}, "プロジェクトのオーナーID")
+	c.Flags().StringSlice("owner-group-ids", []string{}, "プロジェクトのオーナーグループID")
+	c.Flags().String("kind", "personal", "プロジェクトの種類 (personal | shared)")
 	return c
 }
