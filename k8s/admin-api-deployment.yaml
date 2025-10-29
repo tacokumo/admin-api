@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: admin-api
-  namespace: tacokumo-admin
+  namespace: tacokumo
 spec:
   replicas: 2
   selector:

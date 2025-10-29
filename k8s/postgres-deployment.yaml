@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgresql
-  namespace: tacokumo-admin
+  namespace: tacokumo
 spec:
   replicas: 1
   selector:

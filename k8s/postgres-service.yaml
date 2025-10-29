@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgresql
-  namespace: tacokumo-admin
+  namespace: tacokumo
 spec:
   type: ClusterIP
   ports:

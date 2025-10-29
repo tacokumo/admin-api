@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: admin-api-config
-  namespace: tacokumo-admin
+  namespace: tacokumo
 data:
   server.yaml: |
     addr: "0.0.0.0"

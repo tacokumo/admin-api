@@ -17,7 +17,7 @@
 kubectl create secret tls admin-api-tls \
   --cert=path/to/api-server.crt \
   --key=path/to/api-server.key \
-  -n tacokumo-admin
+  -n tacokumo
 ```
 
 ### 2. Secret の更新
@@ -49,7 +49,6 @@ image: your-registry.example.com/tacokumo/admin-api:tag
 kubectl apply -f k8s/
 
 # または個別に適用
-kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/postgres-pvc.yaml
@@ -69,19 +68,19 @@ kubectl apply -k k8s/
 
 ```bash
 # Podの状態を確認
-kubectl get pods -n tacokumo-admin
+kubectl get pods -n tacokumo
 
 # Serviceの状態を確認
-kubectl get services -n tacokumo-admin
+kubectl get services -n tacokumo
 
 # Deploymentの状態を確認
-kubectl get deployments -n tacokumo-admin
+kubectl get deployments -n tacokumo
 
 # ログを確認
-kubectl logs -n tacokumo-admin -l app=admin-api
+kubectl logs -n tacokumo -l app=admin-api
 
 # PostgreSQLのログを確認
-kubectl logs -n tacokumo-admin -l app=postgresql
+kubectl logs -n tacokumo -l app=postgresql
 ```
 
 ## アクセス方法
@@ -90,7 +89,7 @@ kubectl logs -n tacokumo-admin -l app=postgresql
 
 ```bash
 # External IPを確認
-kubectl get service admin-api -n tacokumo-admin
+kubectl get service admin-api -n tacokumo
 
 # 表示されたEXTERNAL-IPを使用してアクセス
 # https://<EXTERNAL-IP>:8444
@@ -99,7 +98,7 @@ kubectl get service admin-api -n tacokumo-admin
 ### Port Forwarding の場合
 
 ```bash
-kubectl port-forward -n tacokumo-admin service/admin-api 8444:8444
+kubectl port-forward -n tacokumo service/admin-api 8444:8444
 
 # https://localhost:8444 でアクセス可能
 ```
@@ -110,23 +109,23 @@ kubectl port-forward -n tacokumo-admin service/admin-api 8444:8444
 
 ```bash
 # Pod の詳細を確認
-kubectl describe pod -n tacokumo-admin <pod-name>
+kubectl describe pod -n tacokumo <pod-name>
 
 # イベントを確認
-kubectl get events -n tacokumo-admin --sort-by='.lastTimestamp'
+kubectl get events -n tacokumo --sort-by='.lastTimestamp'
 ```
 
 ### データベース接続エラーの場合
 
 ```bash
 # PostgreSQL Podが起動しているか確認
-kubectl get pods -n tacokumo-admin -l app=postgresql
+kubectl get pods -n tacokumo -l app=postgresql
 
 # PostgreSQL Podのログを確認
-kubectl logs -n tacokumo-admin -l app=postgresql
+kubectl logs -n tacokumo -l app=postgresql
 
 # PostgreSQL Podに接続してテスト
-kubectl exec -it -n tacokumo-admin <postgresql-pod-name> -- psql -U admin_api -d tacokumo_admin_db
+kubectl exec -it -n tacokumo <postgresql-pod-name> -- psql -U admin_api -d tacokumo_admin_db
 ```
 
 ## 削除方法
@@ -136,7 +135,7 @@ kubectl exec -it -n tacokumo-admin <postgresql-pod-name> -- psql -U admin_api -d
 kubectl delete -f k8s/
 
 # または
-kubectl delete namespace tacokumo-admin
+kubectl delete namespace tacokumo
 ```
 
 ## カスタマイズ
@@ -144,7 +143,7 @@ kubectl delete namespace tacokumo-admin
 ### レプリカ数の変更
 
 ```bash
-kubectl scale deployment admin-api -n tacokumo-admin --replicas=3
+kubectl scale deployment admin-api -n tacokumo --replicas=3
 ```
 
 ### リソース制限の調整
