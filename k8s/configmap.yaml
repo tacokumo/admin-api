@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-api-config
+  namespace: tacokumo
+data:
+  server.yaml: |
+    addr: "0.0.0.0"
+    port: "8444"
+    admin_db:
+      host: "postgresql"
+      port: 5432
+      user: "admin_api"
+      password: "password"
+      db_name: "tacokumo_admin_db"
+      initial_conn_retry: 10
+    auth:
+      domain: dev-le67yyejyp2uhra7.jp.auth0.com
+      audience: admin.tacokumo.pepalab.com
+    cors:
+      allow_origins: "https://localhost:8443,http://localhost:3000"
+      allow_methods: "GET,POST,PUT,DELETE,OPTIONS"
+      allow_headers: "Content-Type,Authorization"
+      expose_headers: "Authorization"
+      allow_credentials: true
+      max_age: 86400
+    tls:
+      enabled: true
+      cert_file: /app/certs/api-server.crt
+      key_file: /app/certs/api-server.key
