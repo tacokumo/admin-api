@@ -20,6 +20,7 @@ require (
 	github.com/ogen-go/ogen v1.14.0
 	github.com/onsi/ginkgo/v2 v2.26.0
 	github.com/onsi/gomega v1.38.2
+	github.com/samber/lo v1.52.0
 	github.com/spf13/cobra v1.10.1
 	github.com/testcontainers/testcontainers-go v0.39.0
 	go.opentelemetry.io/otel v1.38.0

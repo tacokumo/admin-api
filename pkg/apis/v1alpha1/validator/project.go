@@ -11,6 +11,50 @@ import (
 	"github.com/tacokumo/admin-api/pkg/middleware"
 )
 
+func IsOnlyPermitedToReadPersonalProjects(ctx context.Context) (bool, error) {
+	claims, ok := ctx.Value(jwtmiddleware.ContextKey{}).(*auth0validator.ValidatedClaims)
+	if !ok {
+		return false, errors.New("the auth info is not valid")
+	}
+	customClaims, ok := claims.CustomClaims.(*middleware.CustomClaims)
+	if !ok {
+		return false, errors.New("invalid custom claims type")
+	}
+	perms, err := ParsePermissions(customClaims.Permissions)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if perms.PersonalProject.CanRead {
+		if len(perms.Project) == 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func CollectPermittedProjectNamesToRead(ctx context.Context) ([]string, error) {
+	claims, ok := ctx.Value(jwtmiddleware.ContextKey{}).(*auth0validator.ValidatedClaims)
+	if !ok {
+		return nil, errors.New("the auth info is not valid")
+	}
+	customClaims, ok := claims.CustomClaims.(*middleware.CustomClaims)
+	if !ok {
+		return nil, errors.New("invalid custom claims type")
+	}
+	perms, err := ParsePermissions(customClaims.Permissions)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	names := make([]string, 0, len(perms.Project))
+	for name := range perms.Project {
+		names = append(names, name)
+	}
+	return names, nil
+}
+
 func PreValidateProjectCreate(
 	ctx context.Context,
 	logger *slog.Logger,

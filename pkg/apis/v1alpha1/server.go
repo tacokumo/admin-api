@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/cockroachdb/errors"
+	"github.com/samber/lo"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
 	"github.com/tacokumo/admin-api/pkg/apis/v1alpha1/validator"
 	"github.com/tacokumo/admin-api/pkg/db/admindb"
@@ -110,26 +111,55 @@ func (s *Service) CreateProject(ctx context.Context, req *adminv1alpha1.CreatePr
 
 // ListProjects implements generated.Handler.
 func (s *Service) ListProjects(ctx context.Context, params adminv1alpha1.ListProjectsParams) (adminv1alpha1.ListProjectsRes, error) {
-	projects, err := s.queries.ListProjectsWithPagination(ctx, admindb.ListProjectsWithPaginationParams{
-		Limit:  int32(params.Limit),
-		Offset: int32(params.Offset),
-	})
+	canReadPersonalOnly, err := validator.IsOnlyPermitedToReadPersonalProjects(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	res := make(adminv1alpha1.ListProjectsOKApplicationJSON, 0, len(projects))
-	for _, p := range projects {
-		res = append(res, adminv1alpha1.Project{
-			ID:          strconv.Itoa(int(p.ID)),
-			Name:        p.Name,
-			Description: p.Description,
-			CreatedAt:   p.CreatedAt.Time,
-			UpdatedAt:   p.UpdatedAt.Time,
-		})
+	readableProjectNames, err := validator.CollectPermittedProjectNamesToRead(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 
-	return &res, nil
+	projects := adminv1alpha1.ListProjectsOKApplicationJSON{}
+	if canReadPersonalOnly {
+		proj, err := s.queries.GetOwnedPersonalProject(ctx)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		projects = append(projects, adminv1alpha1.Project{
+			ID:          strconv.Itoa(int(proj.ID)),
+			Name:        proj.Name,
+			Description: proj.Description,
+			CreatedAt:   proj.CreatedAt.Time,
+			UpdatedAt:   proj.UpdatedAt.Time,
+		})
+	} else {
+
+		listProjectsParams := admindb.ListProjectsWithPaginationParams{
+			Limit:  int32(params.Limit),
+			Offset: int32(params.Offset),
+			Names:  readableProjectNames,
+		}
+		results, err := s.queries.ListProjectsWithPagination(ctx, listProjectsParams)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		projects = lo.Map(results, func(p admindb.TacokumoAdminProject, _ int) adminv1alpha1.Project {
+			return adminv1alpha1.Project{
+				ID:          strconv.Itoa(int(p.ID)),
+				Name:        p.Name,
+				Description: p.Description,
+				CreatedAt:   p.CreatedAt.Time,
+				UpdatedAt:   p.UpdatedAt.Time,
+			}
+		})
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &projects, nil
 }
 
 // GetReadinessCheck implements generated.Handler.

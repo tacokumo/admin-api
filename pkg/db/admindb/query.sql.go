@@ -41,6 +41,39 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 	return err
 }
 
+const getOwnedPersonalProject = `-- name: GetOwnedPersonalProject :one
+SELECT id, name, description, kind, created_at, updated_at
+FROM tacokumo_admin.projects
+WHERE kind = 'personal' AND id IN (
+    SELECT project_id
+    FROM tacokumo_admin.user_role_relations
+    WHERE user_id = $1
+)
+`
+
+// GetOwnedPersonalProject
+//
+//	SELECT id, name, description, kind, created_at, updated_at
+//	FROM tacokumo_admin.projects
+//	WHERE kind = 'personal' AND id IN (
+//	    SELECT project_id
+//	    FROM tacokumo_admin.user_role_relations
+//	    WHERE user_id = $1
+//	)
+func (q *Queries) GetOwnedPersonalProject(ctx context.Context, userID int64) (TacokumoAdminProject, error) {
+	row := q.db.QueryRow(ctx, getOwnedPersonalProject, userID)
+	var i TacokumoAdminProject
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Kind,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getProjectByName = `-- name: GetProjectByName :one
 SELECT id, name, description, kind, created_at, updated_at
 FROM tacokumo_admin.projects
@@ -69,6 +102,7 @@ func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAd
 const listProjectsWithPagination = `-- name: ListProjectsWithPagination :many
 SELECT id, name, description, kind, created_at, updated_at
 FROM tacokumo_admin.projects
+WHERE name IN ($3)
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -76,16 +110,18 @@ LIMIT $1 OFFSET $2
 type ListProjectsWithPaginationParams struct {
 	Limit  int32
 	Offset int32
+	Names  []string
 }
 
 // ListProjectsWithPagination
 //
 //	SELECT id, name, description, kind, created_at, updated_at
 //	FROM tacokumo_admin.projects
+//	WHERE name IN ($3)
 //	ORDER BY created_at DESC
 //	LIMIT $1 OFFSET $2
 func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjectsWithPaginationParams) ([]TacokumoAdminProject, error) {
-	rows, err := q.db.Query(ctx, listProjectsWithPagination, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listProjectsWithPagination, arg.Limit, arg.Offset, arg.Names)
 	if err != nil {
 		return nil, err
 	}
