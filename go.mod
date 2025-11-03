@@ -9,7 +9,7 @@ tool (
 )
 
 require (
-	github.com/auth0/go-auth0 v1.29.0
+	github.com/auth0/go-auth0 v1.31.0
 	github.com/auth0/go-jwt-middleware/v2 v2.3.0
 	github.com/cockroachdb/errors v1.12.0
 	github.com/exaring/otelpgx v0.9.3
@@ -116,7 +116,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/oauth2 v0.31.0 // indirect
+	golang.org/x/oauth2 v0.32.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250922171735-9219d122eba9 // indirect
