@@ -7,6 +7,8 @@ package admindb
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const checkDBConnection = `-- name: CheckDBConnection :one
@@ -41,22 +43,71 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 	return err
 }
 
-const getProjectByName = `-- name: GetProjectByName :one
-SELECT id, name, description, kind, created_at, updated_at
-FROM tacokumo_admin.projects
-WHERE name = $1
+const createRole = `-- name: CreateRole :exec
+INSERT INTO tacokumo_admin.roles (project_id, name, description) VALUES ($1, $2, $3)
 `
 
-// GetProjectByName
+type CreateRoleParams struct {
+	ProjectID   int64
+	Name        string
+	Description string
+}
+
+// CreateRole
 //
-//	SELECT id, name, description, kind, created_at, updated_at
+//	INSERT INTO tacokumo_admin.roles (project_id, name, description) VALUES ($1, $2, $3)
+func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) error {
+	_, err := q.db.Exec(ctx, createRole, arg.ProjectID, arg.Name, arg.Description)
+	return err
+}
+
+const createUser = `-- name: CreateUser :exec
+INSERT INTO tacokumo_admin.users (email) VALUES ($1)
+`
+
+// CreateUser
+//
+//	INSERT INTO tacokumo_admin.users (email) VALUES ($1)
+func (q *Queries) CreateUser(ctx context.Context, email string) error {
+	_, err := q.db.Exec(ctx, createUser, email)
+	return err
+}
+
+const createUserGroup = `-- name: CreateUserGroup :exec
+INSERT INTO tacokumo_admin.usergroups (project_id, name, description) VALUES ($1, $2, $3)
+`
+
+type CreateUserGroupParams struct {
+	ProjectID   int64
+	Name        string
+	Description string
+}
+
+// CreateUserGroup
+//
+//	INSERT INTO tacokumo_admin.usergroups (project_id, name, description) VALUES ($1, $2, $3)
+func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams) error {
+	_, err := q.db.Exec(ctx, createUserGroup, arg.ProjectID, arg.Name, arg.Description)
+	return err
+}
+
+const getProjectByDisplayID = `-- name: GetProjectByDisplayID :one
+SELECT id, display_id, name, description, kind, created_at, updated_at
+FROM tacokumo_admin.projects
+WHERE display_id = $1
+`
+
+// GetProjectByDisplayID
+//
+//	SELECT id, display_id, name, description, kind, created_at, updated_at
 //	FROM tacokumo_admin.projects
-//	WHERE name = $1
-func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAdminProject, error) {
-	row := q.db.QueryRow(ctx, getProjectByName, name)
+//	WHERE display_id = $1
+func (q *Queries) GetProjectByDisplayID(ctx context.Context, displayID pgtype.UUID) (TacokumoAdminProject, error) {
+	row := q.db.QueryRow(ctx, getProjectByDisplayID, displayID)
 	var i TacokumoAdminProject
 	err := row.Scan(
 		&i.ID,
+		&i.DisplayID,
 		&i.Name,
 		&i.Description,
 		&i.Kind,
@@ -66,8 +117,120 @@ func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAd
 	return i, err
 }
 
+const getProjectByName = `-- name: GetProjectByName :one
+SELECT id, display_id, name, description, kind, created_at, updated_at
+FROM tacokumo_admin.projects
+WHERE name = $1
+`
+
+// GetProjectByName
+//
+//	SELECT id, display_id, name, description, kind, created_at, updated_at
+//	FROM tacokumo_admin.projects
+//	WHERE name = $1
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (TacokumoAdminProject, error) {
+	row := q.db.QueryRow(ctx, getProjectByName, name)
+	var i TacokumoAdminProject
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayID,
+		&i.Name,
+		&i.Description,
+		&i.Kind,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRoleByDisplayID = `-- name: GetRoleByDisplayID :one
+SELECT id, display_id, project_id, name, description, created_at, updated_at
+FROM tacokumo_admin.roles
+WHERE project_id = $1 AND display_id = $2
+`
+
+type GetRoleByDisplayIDParams struct {
+	ProjectID int64
+	DisplayID pgtype.UUID
+}
+
+// GetRoleByDisplayID
+//
+//	SELECT id, display_id, project_id, name, description, created_at, updated_at
+//	FROM tacokumo_admin.roles
+//	WHERE project_id = $1 AND display_id = $2
+func (q *Queries) GetRoleByDisplayID(ctx context.Context, arg GetRoleByDisplayIDParams) (TacokumoAdminRole, error) {
+	row := q.db.QueryRow(ctx, getRoleByDisplayID, arg.ProjectID, arg.DisplayID)
+	var i TacokumoAdminRole
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, display_id, email, created_at, updated_at
+FROM tacokumo_admin.users
+WHERE email = $1
+`
+
+// GetUserByEmail
+//
+//	SELECT id, display_id, email, created_at, updated_at
+//	FROM tacokumo_admin.users
+//	WHERE email = $1
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (TacokumoAdminUser, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i TacokumoAdminUser
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserGroupByDisplayID = `-- name: GetUserGroupByDisplayID :one
+SELECT id, display_id, project_id, name, description, created_at, updated_at
+FROM tacokumo_admin.usergroups
+WHERE project_id = $1 AND display_id = $2
+`
+
+type GetUserGroupByDisplayIDParams struct {
+	ProjectID int64
+	DisplayID pgtype.UUID
+}
+
+// GetUserGroupByDisplayID
+//
+//	SELECT id, display_id, project_id, name, description, created_at, updated_at
+//	FROM tacokumo_admin.usergroups
+//	WHERE project_id = $1 AND display_id = $2
+func (q *Queries) GetUserGroupByDisplayID(ctx context.Context, arg GetUserGroupByDisplayIDParams) (TacokumoAdminUsergroup, error) {
+	row := q.db.QueryRow(ctx, getUserGroupByDisplayID, arg.ProjectID, arg.DisplayID)
+	var i TacokumoAdminUsergroup
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listProjectsWithPagination = `-- name: ListProjectsWithPagination :many
-SELECT id, name, description, kind, created_at, updated_at
+SELECT id, display_id, name, description, kind, created_at, updated_at
 FROM tacokumo_admin.projects
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -80,7 +243,7 @@ type ListProjectsWithPaginationParams struct {
 
 // ListProjectsWithPagination
 //
-//	SELECT id, name, description, kind, created_at, updated_at
+//	SELECT id, display_id, name, description, kind, created_at, updated_at
 //	FROM tacokumo_admin.projects
 //	ORDER BY created_at DESC
 //	LIMIT $1 OFFSET $2
@@ -95,6 +258,7 @@ func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjec
 		var i TacokumoAdminProject
 		if err := rows.Scan(
 			&i.ID,
+			&i.DisplayID,
 			&i.Name,
 			&i.Description,
 			&i.Kind,
@@ -109,4 +273,294 @@ func (q *Queries) ListProjectsWithPagination(ctx context.Context, arg ListProjec
 		return nil, err
 	}
 	return items, nil
+}
+
+const listRolesWithPagination = `-- name: ListRolesWithPagination :many
+SELECT id, display_id, project_id, name, description, created_at, updated_at
+FROM tacokumo_admin.roles
+WHERE project_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListRolesWithPaginationParams struct {
+	ProjectID int64
+	Limit     int32
+	Offset    int32
+}
+
+// ListRolesWithPagination
+//
+//	SELECT id, display_id, project_id, name, description, created_at, updated_at
+//	FROM tacokumo_admin.roles
+//	WHERE project_id = $1
+//	ORDER BY created_at DESC
+//	LIMIT $2 OFFSET $3
+func (q *Queries) ListRolesWithPagination(ctx context.Context, arg ListRolesWithPaginationParams) ([]TacokumoAdminRole, error) {
+	rows, err := q.db.Query(ctx, listRolesWithPagination, arg.ProjectID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TacokumoAdminRole
+	for rows.Next() {
+		var i TacokumoAdminRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserGroupMembers = `-- name: ListUserGroupMembers :many
+SELECT u.id,
+      u.display_id,
+      u.email,
+      u.created_at,
+      u.updated_at
+  FROM tacokumo_admin.users u
+  INNER JOIN tacokumo_admin.user_usergroups_relations uur ON u.id = uur.user_id
+  WHERE uur.usergroup_id = $1
+  ORDER BY u.created_at DESC
+`
+
+// ListUserGroupMembers
+//
+//	SELECT u.id,
+//	      u.display_id,
+//	      u.email,
+//	      u.created_at,
+//	      u.updated_at
+//	  FROM tacokumo_admin.users u
+//	  INNER JOIN tacokumo_admin.user_usergroups_relations uur ON u.id = uur.user_id
+//	  WHERE uur.usergroup_id = $1
+//	  ORDER BY u.created_at DESC
+func (q *Queries) ListUserGroupMembers(ctx context.Context, usergroupID int64) ([]TacokumoAdminUser, error) {
+	rows, err := q.db.Query(ctx, listUserGroupMembers, usergroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TacokumoAdminUser
+	for rows.Next() {
+		var i TacokumoAdminUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayID,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserGroupsWithPagination = `-- name: ListUserGroupsWithPagination :many
+SELECT id, display_id, project_id, name, description, created_at, updated_at
+FROM tacokumo_admin.usergroups
+WHERE project_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListUserGroupsWithPaginationParams struct {
+	ProjectID int64
+	Limit     int32
+	Offset    int32
+}
+
+// ListUserGroupsWithPagination
+//
+//	SELECT id, display_id, project_id, name, description, created_at, updated_at
+//	FROM tacokumo_admin.usergroups
+//	WHERE project_id = $1
+//	ORDER BY created_at DESC
+//	LIMIT $2 OFFSET $3
+func (q *Queries) ListUserGroupsWithPagination(ctx context.Context, arg ListUserGroupsWithPaginationParams) ([]TacokumoAdminUsergroup, error) {
+	rows, err := q.db.Query(ctx, listUserGroupsWithPagination, arg.ProjectID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TacokumoAdminUsergroup
+	for rows.Next() {
+		var i TacokumoAdminUsergroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersWithPagination = `-- name: ListUsersWithPagination :many
+SELECT id, display_id, email, created_at, updated_at
+FROM tacokumo_admin.users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersWithPaginationParams struct {
+	Limit  int32
+	Offset int32
+}
+
+// ListUsersWithPagination
+//
+//	SELECT id, display_id, email, created_at, updated_at
+//	FROM tacokumo_admin.users
+//	ORDER BY created_at DESC
+//	LIMIT $1 OFFSET $2
+func (q *Queries) ListUsersWithPagination(ctx context.Context, arg ListUsersWithPaginationParams) ([]TacokumoAdminUser, error) {
+	rows, err := q.db.Query(ctx, listUsersWithPagination, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TacokumoAdminUser
+	for rows.Next() {
+		var i TacokumoAdminUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayID,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateProject = `-- name: UpdateProject :exec
+UPDATE tacokumo_admin.projects
+SET (name, description, updated_at) = ($2, $3, NOW())
+WHERE display_id = $1
+`
+
+type UpdateProjectParams struct {
+	DisplayID   pgtype.UUID
+	Name        string
+	Description string
+}
+
+// UpdateProject
+//
+//	UPDATE tacokumo_admin.projects
+//	SET (name, description, updated_at) = ($2, $3, NOW())
+//	WHERE display_id = $1
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) error {
+	_, err := q.db.Exec(ctx, updateProject, arg.DisplayID, arg.Name, arg.Description)
+	return err
+}
+
+const updateRole = `-- name: UpdateRole :exec
+UPDATE tacokumo_admin.roles
+SET (name, description, updated_at) = ($3, $4, NOW())
+WHERE project_id = $1 AND display_id = $2
+`
+
+type UpdateRoleParams struct {
+	ProjectID   int64
+	DisplayID   pgtype.UUID
+	Name        string
+	Description string
+}
+
+// UpdateRole
+//
+//	UPDATE tacokumo_admin.roles
+//	SET (name, description, updated_at) = ($3, $4, NOW())
+//	WHERE project_id = $1 AND display_id = $2
+func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) error {
+	_, err := q.db.Exec(ctx, updateRole,
+		arg.ProjectID,
+		arg.DisplayID,
+		arg.Name,
+		arg.Description,
+	)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE tacokumo_admin.users
+SET (email, updated_at) = ($2, NOW())
+WHERE display_id = $1
+`
+
+type UpdateUserParams struct {
+	DisplayID pgtype.UUID
+	Email     string
+}
+
+// UpdateUser
+//
+//	UPDATE tacokumo_admin.users
+//	SET (email, updated_at) = ($2, NOW())
+//	WHERE display_id = $1
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.Exec(ctx, updateUser, arg.DisplayID, arg.Email)
+	return err
+}
+
+const updateUserGroup = `-- name: UpdateUserGroup :exec
+UPDATE tacokumo_admin.usergroups
+SET (name, description, updated_at) = ($3, $4, NOW())
+WHERE project_id = $1 AND display_id = $2
+`
+
+type UpdateUserGroupParams struct {
+	ProjectID   int64
+	DisplayID   pgtype.UUID
+	Name        string
+	Description string
+}
+
+// UpdateUserGroup
+//
+//	UPDATE tacokumo_admin.usergroups
+//	SET (name, description, updated_at) = ($3, $4, NOW())
+//	WHERE project_id = $1 AND display_id = $2
+func (q *Queries) UpdateUserGroup(ctx context.Context, arg UpdateUserGroupParams) error {
+	_, err := q.db.Exec(ctx, updateUserGroup,
+		arg.ProjectID,
+		arg.DisplayID,
+		arg.Name,
+		arg.Description,
+	)
+	return err
 }
