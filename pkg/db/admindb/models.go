@@ -26,6 +26,7 @@ type TacokumoAdminGithubAccount struct {
 
 type TacokumoAdminProject struct {
 	ID          int64
+	DisplayID   pgtype.UUID
 	Name        string
 	Description string
 	Kind        string
@@ -43,6 +44,7 @@ type TacokumoAdminProjectOwner struct {
 
 type TacokumoAdminRole struct {
 	ID          int64
+	DisplayID   pgtype.UUID
 	ProjectID   int64
 	Name        string
 	Description string
@@ -68,6 +70,7 @@ type TacokumoAdminRoleAttributesRelation struct {
 
 type TacokumoAdminUser struct {
 	ID        int64
+	DisplayID pgtype.UUID
 	Email     string
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
@@ -91,6 +94,7 @@ type TacokumoAdminUserUsergroupsRelation struct {
 
 type TacokumoAdminUsergroup struct {
 	ID          int64
+	DisplayID   pgtype.UUID
 	ProjectID   int64
 	Name        string
 	Description string

@@ -4,20 +4,24 @@ CREATE SCHEMA IF NOT EXISTS tacokumo_admin;
 -- プロジェクト情報を保持するテーブル
 CREATE TABLE tacokumo_admin.projects (
   id   BIGSERIAL PRIMARY KEY, -- ひとまず主キーはBIGSERIALで、UUIDv7に移行することもあるかもしれない
+  display_id UUID NOT NULL DEFAULT uuidv7(), -- 外部に公開するプロジェクトID
   name VARCHAR(64) NOT NULL, -- プロジェクト名
   description VARCHAR(256) NOT NULL, -- プロジェクトの説明 
   kind VARCHAR(32) NOT NULL DEFAULT 'personal', -- プロジェクトの種類 (将来的に複数種類をサポートする場合に備えて)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(display_id), -- display_idはユニーク
   UNIQUE (name) -- プロジェクト名はユニーク
 );
 
 -- ユーザ情報を保持するテーブル
 CREATE TABLE tacokumo_admin.users (
   id BIGSERIAL PRIMARY KEY, -- ひとまず主キーはBIGSERIALで、UUIDv7に移行することもあるかもしれない
+  display_id UUID NOT NULL DEFAULT uuidv7(), -- 外部に公開するユーザID
   email VARCHAR(256) NOT NULL, -- アカウントのメールアドレス
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(display_id), -- display_idはユニーク
   UNIQUE (email) -- メールアドレスはユニーク
 );
 
@@ -55,11 +59,13 @@ CREATE TABLE tacokumo_admin.account_identities (
 -- ユーザやユーザグループに割り当てられるロールの定義
 CREATE TABLE tacokumo_admin.roles (
   id BIGSERIAL PRIMARY KEY, -- ひとまず主キーはBIGSERIALで、UUIDv7に移行することもあるかもしれない
+  display_id UUID NOT NULL DEFAULT uuidv7(), -- 外部に公開するロールID
   project_id BIGINT NOT NULL REFERENCES tacokumo_admin.projects(id) ON DELETE CASCADE,
   name VARCHAR(32) NOT NULL, -- ロール名 (例: admin, editor, viewer)
   description VARCHAR(256) NOT NULL, -- ロールの説明
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(project_id, display_id), -- display_idはプロジェクト内でユニーク
   UNIQUE (project_id, name) -- ロール名はプロジェクト内でユニーク
 );
 
@@ -87,11 +93,13 @@ CREATE TABLE tacokumo_admin.role_attributes_relations (
 -- ユーザグループ情報を保持するテーブル
 CREATE TABLE tacokumo_admin.usergroups (
   id BIGSERIAL PRIMARY KEY, -- ひとまず主キーはBIGSERIALで、UUIDv7に移行することもあるかもしれない
+  display_id UUID NOT NULL DEFAULT uuidv7(), -- 外部に公開するユーザグループID
   project_id BIGINT NOT NULL REFERENCES tacokumo_admin.projects(id) ON DELETE CASCADE,
   name VARCHAR(64) NOT NULL, -- ユーザグループ名
   description VARCHAR(256) NOT NULL, -- ユーザグループの説明
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(project_id, display_id), -- display_idはプロジェクト内でユニーク
   UNIQUE (project_id, name) -- ユーザグループ名はプロジェクト内でユニーク
 );
 
