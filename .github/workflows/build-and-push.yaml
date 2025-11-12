@@ -9,6 +9,8 @@ on:
 
 jobs:
   docker:
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
