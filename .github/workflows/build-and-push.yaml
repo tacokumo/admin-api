@@ -10,7 +10,7 @@ on:
 jobs:
   docker:
     permissions:
-      contents: write
+      packages: write
     strategy:
       matrix:
         include:
