@@ -15,7 +15,14 @@ env:
 jobs:
   build-and-push:
     name: Build and Push to GHCR
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux/amd64
+          - os: ubuntu-24.04-arm
+            platform: linux/arm64
     permissions:
       contents: read
       packages: write
@@ -48,6 +55,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: .
+        platforms: ${{ matrix.platform }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
