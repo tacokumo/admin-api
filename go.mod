@@ -11,7 +11,7 @@ tool (
 require (
 	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/cockroachdb/errors v1.12.0
-	github.com/exaring/otelpgx v0.9.3
+	github.com/exaring/otelpgx v0.9.4
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
