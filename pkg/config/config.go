@@ -18,11 +18,11 @@ type Config struct {
 }
 
 type AuthConfig struct {
-	Auth0Domain   string `env:"AUTH0_DOMAIN" yaml:"domain"`
-	Auth0Audience string `env:"AUTH0_AUDIENCE" yaml:"audience"`
-	Auth0ClientID string `env:"AUTH0_CLIENT_ID" yaml:"client_id"`
-	// Auth0ClientSecret is required only when you use Management API.
-	Auth0ClientSecret string `env:"AUTH0_CLIENT_SECRET" yaml:"client_secret"`
+	CognitoRegion     string `env:"COGNITO_REGION" yaml:"region"`
+	CognitoUserPoolID string `env:"COGNITO_USER_POOL_ID" yaml:"user_pool_id"`
+	CognitoClientID   string `env:"COGNITO_CLIENT_ID" yaml:"client_id"`
+	// CognitoClientSecret is required only when you use Cognito Management API.
+	CognitoClientSecret string `env:"COGNITO_CLIENT_SECRET" yaml:"client_secret"`
 }
 
 type AdminDBConfig struct {

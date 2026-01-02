@@ -20,7 +20,7 @@ func LoadFromEnv[T any]() (T, error) {
 	}
 
 	if err := loadFromEnvRecursive(value); err != nil {
-		return zero, errors.WithStack(err)
+		return zero, errors.Wrapf(err, "failed to load from env")
 	}
 
 	return cfg, nil
@@ -36,7 +36,7 @@ func OverrideFromEnv[T any](cfg *T) error {
 	}
 
 	if err := loadFromEnvRecursive(value); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "failed to override from env")
 	}
 
 	return nil

@@ -13,7 +13,7 @@ func Logger(logger *slog.Logger) echo.MiddlewareFunc {
 			if err != nil {
 				logger.ErrorContext(c.Request().Context(), "Error", slog.String("error", err.Error()))
 			}
-			logger.Info("request completed",
+			logger.InfoContext(c.Request().Context(), "request completed",
 				slog.String("method", c.Request().Method),
 				slog.String("path", c.Request().URL.Path),
 				slog.String("remote_addr", c.Request().RemoteAddr),

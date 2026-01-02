@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/samber/lo"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
-	"github.com/tacokumo/admin-api/pkg/apis/v1alpha1/validator"
 	"github.com/tacokumo/admin-api/pkg/db/admindb"
 )
 
@@ -21,11 +20,11 @@ type Service struct {
 func (s *Service) CreateRole(ctx context.Context, req *adminv1alpha1.CreateRoleRequest, params adminv1alpha1.CreateRoleParams) (adminv1alpha1.CreateRoleRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 	proj, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 
 	err = s.queries.CreateRole(ctx, admindb.CreateRoleParams{
@@ -34,7 +33,7 @@ func (s *Service) CreateRole(ctx context.Context, req *adminv1alpha1.CreateRoleR
 		Description: req.Description,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to create role")
 	}
 
 	return &adminv1alpha1.Role{
@@ -54,12 +53,12 @@ func (s *Service) CreateRole(ctx context.Context, req *adminv1alpha1.CreateRoleR
 // CreateUser implements generated.Handler.
 func (s *Service) CreateUser(ctx context.Context, req *adminv1alpha1.CreateUserRequest) (adminv1alpha1.CreateUserRes, error) {
 	if err := s.queries.CreateUser(ctx, req.Email); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to create user")
 	}
 
 	user, err := s.queries.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get user by email")
 	}
 
 	return &adminv1alpha1.User{
@@ -75,11 +74,11 @@ func (s *Service) CreateUser(ctx context.Context, req *adminv1alpha1.CreateUserR
 func (s *Service) CreateUserGroup(ctx context.Context, req *adminv1alpha1.CreateUserGroupRequest, params adminv1alpha1.CreateUserGroupParams) (adminv1alpha1.CreateUserGroupRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 	proj, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 
 	err = s.queries.CreateUserGroup(ctx, admindb.CreateUserGroupParams{
@@ -88,7 +87,7 @@ func (s *Service) CreateUserGroup(ctx context.Context, req *adminv1alpha1.Create
 		Description: req.Description,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to create user group")
 	}
 
 	return &adminv1alpha1.UserGroup{
@@ -110,12 +109,12 @@ func (s *Service) CreateUserGroup(ctx context.Context, req *adminv1alpha1.Create
 func (s *Service) GetProject(ctx context.Context, params adminv1alpha1.GetProjectParams) (adminv1alpha1.GetProjectRes, error) {
 	displayId := pgtype.UUID{}
 	if err := displayId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 
 	proj, err := s.queries.GetProjectByDisplayID(ctx, displayId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 
 	return &adminv1alpha1.Project{
@@ -132,17 +131,17 @@ func (s *Service) GetProject(ctx context.Context, params adminv1alpha1.GetProjec
 func (s *Service) GetRole(ctx context.Context, params adminv1alpha1.GetRoleParams) (adminv1alpha1.GetRoleRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 
 	proj, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 
 	roleId := pgtype.UUID{}
 	if err := roleId.Scan(params.RoleId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan role id")
 	}
 	queryArgs := admindb.GetRoleByDisplayIDParams{
 		ProjectID: proj.ID,
@@ -150,7 +149,7 @@ func (s *Service) GetRole(ctx context.Context, params adminv1alpha1.GetRoleParam
 	}
 	role, err := s.queries.GetRoleByDisplayID(ctx, queryArgs)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get role by display id")
 	}
 
 	return &adminv1alpha1.Role{
@@ -174,17 +173,17 @@ func (s *Service) GetRole(ctx context.Context, params adminv1alpha1.GetRoleParam
 func (s *Service) GetUserGroup(ctx context.Context, params adminv1alpha1.GetUserGroupParams) (adminv1alpha1.GetUserGroupRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 
 	proj, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 
 	userGroupId := pgtype.UUID{}
 	if err := userGroupId.Scan(params.GroupId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan group id")
 	}
 	queryArgs := admindb.GetUserGroupByDisplayIDParams{
 		ProjectID: proj.ID,
@@ -192,12 +191,12 @@ func (s *Service) GetUserGroup(ctx context.Context, params adminv1alpha1.GetUser
 	}
 	userGroup, err := s.queries.GetUserGroupByDisplayID(ctx, queryArgs)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get user group by display id")
 	}
 
 	userRecords, err := s.queries.ListUserGroupMembers(ctx, userGroup.ID)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to list user group members")
 	}
 
 	members := lo.Map(userRecords, func(user admindb.TacokumoAdminUser, _ int) adminv1alpha1.User {
@@ -235,7 +234,7 @@ func (s *Service) ListRoles(ctx context.Context, params adminv1alpha1.ListRolesP
 		Offset: int32(params.Offset),
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to list roles with pagination")
 	}
 
 	roles := adminv1alpha1.ListRolesOKApplicationJSON(lo.Map(roleRecords, func(role admindb.TacokumoAdminRole, _ int) adminv1alpha1.Role {
@@ -258,7 +257,7 @@ func (s *Service) ListUserGroups(ctx context.Context, params adminv1alpha1.ListU
 		Offset: int32(params.Offset),
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to list user groups with pagination")
 	}
 
 	userGroups := adminv1alpha1.ListUserGroupsOKApplicationJSON(lo.Map(userGroupRecords, func(ug admindb.TacokumoAdminUsergroup, _ int) adminv1alpha1.UserGroup {
@@ -281,7 +280,7 @@ func (s *Service) ListUsers(ctx context.Context, params adminv1alpha1.ListUsersP
 		Offset: int32(params.Offset),
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to list users with pagination")
 	}
 
 	users := adminv1alpha1.ListUsersOKApplicationJSON(lo.Map(userRecords, func(u admindb.TacokumoAdminUser, _ int) adminv1alpha1.User {
@@ -301,7 +300,7 @@ func (s *Service) ListUsers(ctx context.Context, params adminv1alpha1.ListUsersP
 func (s *Service) UpdateProject(ctx context.Context, req *adminv1alpha1.UpdateProjectRequest, params adminv1alpha1.UpdateProjectParams) (adminv1alpha1.UpdateProjectRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 	err := s.queries.UpdateProject(ctx, admindb.UpdateProjectParams{
 		DisplayID:   projectId,
@@ -309,12 +308,12 @@ func (s *Service) UpdateProject(ctx context.Context, req *adminv1alpha1.UpdatePr
 		Description: req.Description,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to update project")
 	}
 
 	proj, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 	return &adminv1alpha1.Project{
 		ID:          proj.DisplayID.String(),
@@ -330,15 +329,15 @@ func (s *Service) UpdateProject(ctx context.Context, req *adminv1alpha1.UpdatePr
 func (s *Service) UpdateRole(ctx context.Context, req *adminv1alpha1.UpdateRoleRequest, params adminv1alpha1.UpdateRoleParams) (adminv1alpha1.UpdateRoleRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 	project, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 	roleId := pgtype.UUID{}
 	if err := roleId.Scan(params.RoleId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan role id")
 	}
 	err = s.queries.UpdateRole(ctx, admindb.UpdateRoleParams{
 		ProjectID:   project.ID,
@@ -347,7 +346,7 @@ func (s *Service) UpdateRole(ctx context.Context, req *adminv1alpha1.UpdateRoleR
 		Description: req.Description,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to update role")
 	}
 
 	role, err := s.queries.GetRoleByDisplayID(ctx, admindb.GetRoleByDisplayIDParams{
@@ -355,7 +354,7 @@ func (s *Service) UpdateRole(ctx context.Context, req *adminv1alpha1.UpdateRoleR
 		DisplayID: roleId,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get role by display id")
 	}
 
 	return &adminv1alpha1.Role{
@@ -379,15 +378,15 @@ func (s *Service) UpdateRole(ctx context.Context, req *adminv1alpha1.UpdateRoleR
 func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.UpdateUserGroupRequest, params adminv1alpha1.UpdateUserGroupParams) (adminv1alpha1.UpdateUserGroupRes, error) {
 	projectId := pgtype.UUID{}
 	if err := projectId.Scan(params.ProjectId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan project id")
 	}
 	project, err := s.queries.GetProjectByDisplayID(ctx, projectId)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by display id")
 	}
 	userGroupId := pgtype.UUID{}
 	if err := userGroupId.Scan(params.GroupId); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to scan group id")
 	}
 	err = s.queries.UpdateUserGroup(ctx, admindb.UpdateUserGroupParams{
 		ProjectID:   project.ID,
@@ -396,7 +395,7 @@ func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.Update
 		Description: req.Description,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to update user group")
 	}
 
 	userGroup, err := s.queries.GetUserGroupByDisplayID(ctx, admindb.GetUserGroupByDisplayIDParams{
@@ -404,7 +403,7 @@ func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.Update
 		DisplayID: userGroupId,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get user group by display id")
 	}
 
 	return &adminv1alpha1.UserGroup{
@@ -426,26 +425,18 @@ func (s *Service) UpdateUserGroup(ctx context.Context, req *adminv1alpha1.Update
 
 // CreateProject implements generated.Handler.
 func (s *Service) CreateProject(ctx context.Context, req *adminv1alpha1.CreateProjectRequest) (adminv1alpha1.CreateProjectRes, error) {
-	projObj := adminv1alpha1.Project{
-		Name:        req.Name,
-		Description: req.Description,
-		Kind:        adminv1alpha1.ProjectKind(req.Kind),
-	}
-	if err := validator.PreValidateProjectCreate(ctx, s.logger, &projObj); err != nil {
-		return nil, errors.WithStack(err)
-	}
 	createProjectParams := admindb.CreateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
 		Kind:        string(req.Kind),
 	}
 	if err := s.queries.CreateProject(ctx, createProjectParams); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to create project")
 	}
 
 	proj, err := s.queries.GetProjectByName(ctx, req.Name)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to get project by name")
 	}
 	return &adminv1alpha1.Project{
 		ID:          proj.DisplayID.String(),
@@ -464,7 +455,7 @@ func (s *Service) ListProjects(ctx context.Context, params adminv1alpha1.ListPro
 		Offset: int32(params.Offset),
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to list projects with pagination")
 	}
 
 	projects := adminv1alpha1.ListProjectsOKApplicationJSON(lo.Map(projectRecords, func(p admindb.TacokumoAdminProject, _ int) adminv1alpha1.Project {
@@ -472,6 +463,7 @@ func (s *Service) ListProjects(ctx context.Context, params adminv1alpha1.ListPro
 			ID:          p.DisplayID.String(),
 			Name:        p.Name,
 			Description: p.Description,
+			Kind:        adminv1alpha1.ProjectKind(p.Kind),
 			CreatedAt:   p.CreatedAt.Time,
 			UpdatedAt:   p.UpdatedAt.Time,
 		}
@@ -486,7 +478,7 @@ func (s *Service) GetReadinessCheck(ctx context.Context) (*adminv1alpha1.HealthR
 	if err != nil {
 		return &adminv1alpha1.HealthResponse{
 			Status: "ng",
-		}, errors.WithStack(err)
+		}, errors.Wrapf(err, "failed to check DB connection")
 	}
 	return &adminv1alpha1.HealthResponse{
 		Status: "ok",

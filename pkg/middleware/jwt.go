@@ -2,66 +2,145 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
+	"strings"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/auth0/go-jwt-middleware/v2/jwks"
-	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/MicahParks/keyfunc/v2"
 	"github.com/cockroachdb/errors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
 type CustomClaims struct {
+	ClientID    string   `json:"client_id"`
 	Scope       string   `json:"scope"`
 	GrantType   string   `json:"gty"`
 	Permissions []string `json:"permissions"`
+	jwt.RegisteredClaims
 }
 
-// Validate implements validator.CustomClaims.
-func (c *CustomClaims) Validate(context.Context) error {
-	return nil
-}
+type contextKey string
 
-var _ validator.CustomClaims = (*CustomClaims)(nil)
+const ValidatedClaimsKey contextKey = "claims"
 
 func JWTMiddleware(
 	logger *slog.Logger,
-	auth0Domain string,
+	region string,
+	userPoolID string,
 	cacheTTL time.Duration,
-	audience []string) (echo.MiddlewareFunc, error) {
-	issuerURL, err := url.Parse("https://" + auth0Domain + "/")
+	clientIDs []string) (echo.MiddlewareFunc, error) {
+	jwksURL := fmt.Sprintf("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json", region, userPoolID)
+
+	jwks, err := keyfunc.Get(jwksURL, keyfunc.Options{
+		RefreshInterval: cacheTTL,
+	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		logger.Error("failed to get JWKS", slog.String("url", jwksURL), slog.String("error", err.Error()))
+		return nil, errors.Wrapf(err, "failed to get JWKS from %s", jwksURL)
 	}
 
-	cachingProvider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
-	jwtValidator, err := validator.New(
-		cachingProvider.KeyFunc,
-		validator.RS256,
-		issuerURL.String(),
-		audience,
-		validator.WithCustomClaims(func() validator.CustomClaims {
-			return &CustomClaims{}
-		}),
-	)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	issuer := fmt.Sprintf("https://cognito-idp.%s.amazonaws.com/%s", region, userPoolID)
 
-	middleware := jwtmiddleware.New(
-		jwtValidator.ValidateToken,
-		jwtmiddleware.WithExclusionUrls([]string{
-			"/v1alpha1/health/liveness",
-			"/v1alpha1/health/readiness",
-		}),
-		jwtmiddleware.WithErrorHandler(func(w http.ResponseWriter, r *http.Request, err error) {
-			logger.ErrorContext(r.Context(), "JWT validation error", slog.String("error", err.Error()))
-			jwtmiddleware.DefaultErrorHandler(w, r, err)
-		}),
-	)
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			path := c.Request().URL.Path
+			if path == "/v1alpha1/health/liveness" || path == "/v1alpha1/health/readiness" {
+				logger.DebugContext(c.Request().Context(), "skipping JWT validation for health check")
+				return next(c)
+			}
 
-	return echo.WrapMiddleware(middleware.CheckJWT), nil
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				logger.ErrorContext(c.Request().Context(), "missing authorization header")
+				return echo.NewHTTPError(http.StatusUnauthorized, "missing authorization header")
+			}
+
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				logger.ErrorContext(c.Request().Context(), "invalid authorization header format")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid authorization header format")
+			}
+
+			token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, jwks.Keyfunc)
+			if err != nil {
+				logger.ErrorContext(c.Request().Context(), "JWT validation error", slog.String("error", err.Error()))
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+			}
+
+			if !token.Valid {
+				logger.ErrorContext(c.Request().Context(), "invalid token")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+			}
+
+			claims, ok := token.Claims.(*CustomClaims)
+			if !ok {
+				logger.ErrorContext(c.Request().Context(), "failed to parse claims")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token claims")
+			}
+
+			exp, err := claims.GetExpirationTime()
+			if err != nil {
+				logger.ErrorContext(c.Request().Context(), "failed to get expiration time", slog.String("error", err.Error()))
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+			}
+			if exp != nil && time.Now().After(exp.Time) {
+				logger.ErrorContext(c.Request().Context(), "token expired")
+				return echo.NewHTTPError(http.StatusUnauthorized, "token expired")
+			}
+
+			iss, err := claims.GetIssuer()
+			if err != nil {
+				logger.ErrorContext(c.Request().Context(), "failed to get issuer", slog.String("error", err.Error()))
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+			}
+			if iss != issuer {
+				logger.ErrorContext(c.Request().Context(), "invalid issuer", slog.String("issuer", iss))
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid issuer")
+			}
+
+			// Check client_id claim first (used in client_credentials flow)
+			validClientID := false
+			if claims.ClientID != "" {
+				for _, clientID := range clientIDs {
+					if claims.ClientID == clientID {
+						validClientID = true
+						break
+					}
+				}
+			}
+
+			// If client_id claim is not present or invalid, check aud claim
+			if !validClientID {
+				aud, err := claims.GetAudience()
+				if err != nil {
+					logger.ErrorContext(c.Request().Context(), "failed to get audience", slog.String("error", err.Error()))
+					return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+				}
+				for _, clientID := range clientIDs {
+					for _, a := range aud {
+						if a == clientID {
+							validClientID = true
+							break
+						}
+					}
+					if validClientID {
+						break
+					}
+				}
+			}
+
+			if !validClientID {
+				logger.ErrorContext(c.Request().Context(), "invalid client ID")
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid client ID")
+			}
+
+			ctx := context.WithValue(c.Request().Context(), ValidatedClaimsKey, claims)
+			c.SetRequest(c.Request().WithContext(ctx))
+
+			return next(c)
+		}
+	}, nil
 }

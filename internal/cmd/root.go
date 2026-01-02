@@ -19,16 +19,16 @@ func New(logger *slog.Logger) *cobra.Command {
 			fp := os.Getenv("ADMIN_API_CONFIG_FILE")
 			cfg, err := config.LoadFromYAMLWithEnvOverride(fp)
 			if err != nil {
-				return errors.WithStack(err)
+				return errors.Wrapf(err, "failed to load config from file: %s", fp)
 			}
 
 			srv, err := server.New(cmd.Context(), cfg, logger)
 			if err != nil {
-				return errors.WithStack(err)
+				return errors.Wrapf(err, "failed to create server")
 			}
 
 			if err := srv.Start(cmd.Context()); err != nil {
-				return errors.WithStack(err)
+				return errors.Wrapf(err, "failed to start server")
 			}
 
 			return nil

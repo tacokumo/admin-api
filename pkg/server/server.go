@@ -49,15 +49,15 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	s.e.Use(middleware.Logger(logger))
 	corsConfig := setupCORSConfig(cfg)
 	s.e.Use(echomiddleware.CORSWithConfig(corsConfig))
-	jwtValidateMiddleware, err := middleware.JWTMiddleware(logger, cfg.Auth.Auth0Domain, 5*time.Minute, []string{cfg.Auth.Auth0Audience})
+	jwtValidateMiddleware, err := middleware.JWTMiddleware(logger, cfg.Auth.CognitoRegion, cfg.Auth.CognitoUserPoolID, 5*time.Minute, []string{cfg.Auth.CognitoClientID})
 	if err != nil {
-		return s, errors.WithStack(err)
+		return s, errors.Wrapf(err, "failed to create JWT middleware")
 	}
 	s.e.Use(jwtValidateMiddleware)
 
 	opts, cleanups, err := initAdminServerConfig(ctx, logger)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to initialize admin server config")
 	}
 
 	adminDBConfig := pg.Config{
@@ -69,14 +69,14 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	}
 	pgxConfig, err := pgxpool.ParseConfig(adminDBConfig.DSN())
 	if err != nil {
-		return s, errors.WithStack(err)
+		return s, errors.Wrapf(err, "failed to parse pgx config")
 	}
 
 	pgxConfig.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	p, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 	if err != nil {
-		return s, errors.WithStack(err)
+		return s, errors.Wrapf(err, "failed to create pgx pool")
 	}
 	cleanups = append(cleanups, func(ctx context.Context) {
 		p.Close()
@@ -102,7 +102,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	}
 
 	if err := otelpgx.RecordStats(p); err != nil {
-		return s, errors.WithStack(err)
+		return s, errors.Wrapf(err, "failed to record pgx stats")
 	}
 	queries := admindb.New(p)
 
@@ -111,7 +111,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 		opts...,
 	)
 	if err != nil {
-		return s, errors.WithStack(err)
+		return s, errors.Wrapf(err, "failed to create v1alpha1 server")
 	}
 	v1alphaGroup := s.e.Group("/v1alpha1")
 	v1alphaGroup.Any("/*", echo.WrapHandler(v1alpha1Service))
@@ -132,7 +132,7 @@ func (s *Server) Start(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := s.e.Shutdown(ctx); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "failed to shutdown server")
 	}
 
 	wg.Wait()
@@ -152,13 +152,13 @@ func initAdminServerConfig(
 
 	res, err := newResource()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrapf(err, "failed to create resource")
 	}
 
 	// STEP1: TracerProvider
 	traceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrapf(err, "failed to create trace exporter")
 	}
 
 	tp := sdktrace.NewTracerProvider(
@@ -178,7 +178,7 @@ func initAdminServerConfig(
 	// STEP2: MeterProvider
 	meterExporter, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, nil, errors.Wrapf(err, "failed to create meter exporter")
 	}
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
@@ -239,7 +239,7 @@ func startAPIServer(ctx context.Context, logger *slog.Logger, e *echo.Echo, cfg 
 func setupTLSConfig(tlsCfg config.TLSConfig) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(tlsCfg.CertFile, tlsCfg.KeyFile)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to load X509 key pair")
 	}
 
 	return &tls.Config{

@@ -7,3 +7,9 @@
 <https://github.com/pepabo/tacokumo> をクローンし､
 terraformをdevelop環境に対して実行しておきます｡
 
+## 開発環境
+
+```shell
+envchain tacokumo-admin make docker-compose-up
+envchain tacokumo-cli ./bin/client project list
+```

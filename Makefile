@@ -23,14 +23,14 @@ build:
 
 # Migration configuration
 IS_DOCKER ?= true
-HOST ?= postgresql
-PORT ?= 5432
-USER ?= admin_api
-PASSWORD ?= password
-DB ?= tacokumo_admin_db
-DEV_USER ?= postgres
-DEV_PASSWORD ?= password
-DEV_DB ?= postgres
+DB_HOST ?= postgresql
+DB_PORT ?= 5432
+DB_USER ?= admin_api
+DB_PASSWORD ?= password
+DB_NAME ?= tacokumo_admin_db
+DEV_DB_USER ?= postgres
+DEV_DB_PASSWORD ?= password
+DEV_DB_NAME ?= postgres
 DOCKER_NETWORK ?= admin-api_default
 
 # Conditional network flag for Docker
@@ -45,8 +45,8 @@ migrate:
 	docker run --rm $(NETWORK_FLAG) \
 		-v $(PWD)/sql/schema.sql:/schema.sql \
 		arigaio/atlas:latest schema apply \
-		--url "postgres://$(USER):$(PASSWORD)@$(HOST):$(PORT)/$(DB)?sslmode=disable" \
-		--dev-url "postgres://$(DEV_USER):$(DEV_PASSWORD)@$(HOST):$(PORT)/$(DEV_DB)?sslmode=disable" \
+		--url "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" \
+		--dev-url "postgres://$(DEV_DB_USER):$(DEV_DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DEV_DB_NAME)?sslmode=disable" \
 		--to "file:///schema.sql" --auto-approve
 
 .PHONY: docker-compose-up
