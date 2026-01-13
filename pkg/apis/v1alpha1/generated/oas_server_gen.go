@@ -23,7 +23,7 @@ type Handler interface {
 	// CreateUser implements createUser operation.
 	//
 	// Create a new user.
-	// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+	// Admin上で管理するユーザを作成するだけであり､真実源はGitHubで管理される.
 	//
 	// POST /v1alpha1/users
 	CreateUser(ctx context.Context, req *CreateUserRequest) (CreateUserRes, error)
@@ -33,6 +33,13 @@ type Handler interface {
 	//
 	// POST /v1alpha1/projects/{projectId}/usergroups
 	CreateUserGroup(ctx context.Context, req *CreateUserGroupRequest, params CreateUserGroupParams) (CreateUserGroupRes, error)
+	// GetCurrentUser implements getCurrentUser operation.
+	//
+	// Returns information about the currently authenticated user,
+	// including their bearer token for API access.
+	//
+	// GET /v1alpha1/auth/me
+	GetCurrentUser(ctx context.Context) (GetCurrentUserRes, error)
 	// GetLivenessCheck implements getLivenessCheck operation.
 	//
 	// Check if the service is alive.
@@ -63,6 +70,20 @@ type Handler interface {
 	//
 	// GET /v1alpha1/projects/{projectId}/usergroups/{groupId}
 	GetUserGroup(ctx context.Context, params GetUserGroupParams) (GetUserGroupRes, error)
+	// HandleOAuthCallback implements handleOAuthCallback operation.
+	//
+	// Handles the GitHub OAuth callback, exchanges the authorization code for tokens,
+	// creates a user session, and redirects to the frontend.
+	//
+	// GET /v1alpha1/auth/callback
+	HandleOAuthCallback(ctx context.Context, params HandleOAuthCallbackParams) (HandleOAuthCallbackRes, error)
+	// InitiateLogin implements initiateLogin operation.
+	//
+	// Initiates the GitHub OAuth authentication flow.
+	// Redirects the user to GitHub for authentication.
+	//
+	// GET /v1alpha1/auth/login
+	InitiateLogin(ctx context.Context, params InitiateLoginParams) (InitiateLoginRes, error)
 	// ListProjects implements listProjects operation.
 	//
 	// Retrieve a list of all projects.
@@ -87,6 +108,19 @@ type Handler interface {
 	//
 	// GET /v1alpha1/users
 	ListUsers(ctx context.Context, params ListUsersParams) (ListUsersRes, error)
+	// Logout implements logout operation.
+	//
+	// Invalidates the user session and clears authentication cookies.
+	//
+	// POST /v1alpha1/auth/logout
+	Logout(ctx context.Context) (LogoutRes, error)
+	// RefreshToken implements refreshToken operation.
+	//
+	// Refreshes the GitHub access token using the refresh token.
+	// Updates the user session with new tokens.
+	//
+	// POST /v1alpha1/auth/refresh
+	RefreshToken(ctx context.Context) (RefreshTokenRes, error)
 	// UpdateProject implements updateProject operation.
 	//
 	// Update an existing project.
@@ -110,18 +144,20 @@ type Handler interface {
 // Server implements http server based on OpenAPI v3 specification and
 // calls Handler to handle requests.
 type Server struct {
-	h Handler
+	h   Handler
+	sec SecurityHandler
 	baseServer
 }
 
 // NewServer creates new Server.
-func NewServer(h Handler, opts ...ServerOption) (*Server, error) {
+func NewServer(h Handler, sec SecurityHandler, opts ...ServerOption) (*Server, error) {
 	s, err := newServerConfig(opts...).baseServer()
 	if err != nil {
 		return nil, err
 	}
 	return &Server{
 		h:          h,
+		sec:        sec,
 		baseServer: s,
 	}, nil
 }

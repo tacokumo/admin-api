@@ -3,10 +3,102 @@
 package generated
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/go-faster/errors"
 )
+
+// Ref: #/components/schemas/AuthenticatedUser
+type AuthenticatedUser struct {
+	User GitHubUser `json:"user"`
+	// Bearer token for API access.
+	BearerToken     string           `json:"bearer_token"`
+	TeamMemberships []TeamMembership `json:"team_memberships"`
+}
+
+// GetUser returns the value of User.
+func (s *AuthenticatedUser) GetUser() GitHubUser {
+	return s.User
+}
+
+// GetBearerToken returns the value of BearerToken.
+func (s *AuthenticatedUser) GetBearerToken() string {
+	return s.BearerToken
+}
+
+// GetTeamMemberships returns the value of TeamMemberships.
+func (s *AuthenticatedUser) GetTeamMemberships() []TeamMembership {
+	return s.TeamMemberships
+}
+
+// SetUser sets the value of User.
+func (s *AuthenticatedUser) SetUser(val GitHubUser) {
+	s.User = val
+}
+
+// SetBearerToken sets the value of BearerToken.
+func (s *AuthenticatedUser) SetBearerToken(val string) {
+	s.BearerToken = val
+}
+
+// SetTeamMemberships sets the value of TeamMemberships.
+func (s *AuthenticatedUser) SetTeamMemberships(val []TeamMembership) {
+	s.TeamMemberships = val
+}
+
+func (*AuthenticatedUser) getCurrentUserRes() {}
+func (*AuthenticatedUser) refreshTokenRes()   {}
+
+type BearerAuth struct {
+	Token string
+	Roles []string
+}
+
+// GetToken returns the value of Token.
+func (s *BearerAuth) GetToken() string {
+	return s.Token
+}
+
+// GetRoles returns the value of Roles.
+func (s *BearerAuth) GetRoles() []string {
+	return s.Roles
+}
+
+// SetToken sets the value of Token.
+func (s *BearerAuth) SetToken(val string) {
+	s.Token = val
+}
+
+// SetRoles sets the value of Roles.
+func (s *BearerAuth) SetRoles(val []string) {
+	s.Roles = val
+}
+
+type CookieAuth struct {
+	APIKey string
+	Roles  []string
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *CookieAuth) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetRoles returns the value of Roles.
+func (s *CookieAuth) GetRoles() []string {
+	return s.Roles
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *CookieAuth) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetRoles sets the value of Roles.
+func (s *CookieAuth) SetRoles(val []string) {
+	s.Roles = val
+}
 
 type CreateProjectBadRequest ErrorResponse
 
@@ -255,8 +347,12 @@ func (s *ErrorResponse) SetError(val string) {
 	s.Error = val
 }
 
-func (*ErrorResponse) listProjectsRes() {}
-func (*ErrorResponse) listUsersRes()    {}
+func (*ErrorResponse) getCurrentUserRes() {}
+func (*ErrorResponse) initiateLoginRes()  {}
+func (*ErrorResponse) listProjectsRes()   {}
+func (*ErrorResponse) listUsersRes()      {}
+func (*ErrorResponse) logoutRes()         {}
+func (*ErrorResponse) refreshTokenRes()   {}
 
 type GetProjectInternalServerError ErrorResponse
 
@@ -282,6 +378,117 @@ type GetUserGroupNotFound ErrorResponse
 
 func (*GetUserGroupNotFound) getUserGroupRes() {}
 
+// Ref: #/components/schemas/GitHubUser
+type GitHubUser struct {
+	// Internal user ID.
+	ID string `json:"id"`
+	// GitHub user ID.
+	GithubID int64 `json:"github_id"`
+	// GitHub username.
+	Username string `json:"username"`
+	// User email address.
+	Email string `json:"email"`
+	// User display name.
+	Name string `json:"name"`
+	// User avatar URL.
+	AvatarURL url.URL     `json:"avatar_url"`
+	CreatedAt OptDateTime `json:"created_at"`
+	UpdatedAt OptDateTime `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *GitHubUser) GetID() string {
+	return s.ID
+}
+
+// GetGithubID returns the value of GithubID.
+func (s *GitHubUser) GetGithubID() int64 {
+	return s.GithubID
+}
+
+// GetUsername returns the value of Username.
+func (s *GitHubUser) GetUsername() string {
+	return s.Username
+}
+
+// GetEmail returns the value of Email.
+func (s *GitHubUser) GetEmail() string {
+	return s.Email
+}
+
+// GetName returns the value of Name.
+func (s *GitHubUser) GetName() string {
+	return s.Name
+}
+
+// GetAvatarURL returns the value of AvatarURL.
+func (s *GitHubUser) GetAvatarURL() url.URL {
+	return s.AvatarURL
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *GitHubUser) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *GitHubUser) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *GitHubUser) SetID(val string) {
+	s.ID = val
+}
+
+// SetGithubID sets the value of GithubID.
+func (s *GitHubUser) SetGithubID(val int64) {
+	s.GithubID = val
+}
+
+// SetUsername sets the value of Username.
+func (s *GitHubUser) SetUsername(val string) {
+	s.Username = val
+}
+
+// SetEmail sets the value of Email.
+func (s *GitHubUser) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetName sets the value of Name.
+func (s *GitHubUser) SetName(val string) {
+	s.Name = val
+}
+
+// SetAvatarURL sets the value of AvatarURL.
+func (s *GitHubUser) SetAvatarURL(val url.URL) {
+	s.AvatarURL = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *GitHubUser) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *GitHubUser) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+type HandleOAuthCallbackBadRequest ErrorResponse
+
+func (*HandleOAuthCallbackBadRequest) handleOAuthCallbackRes() {}
+
+// HandleOAuthCallbackFound is response for HandleOAuthCallback operation.
+type HandleOAuthCallbackFound struct{}
+
+func (*HandleOAuthCallbackFound) handleOAuthCallbackRes() {}
+
+type HandleOAuthCallbackUnauthorized ErrorResponse
+
+func (*HandleOAuthCallbackUnauthorized) handleOAuthCallbackRes() {}
+
 // Ref: #/components/schemas/HealthResponse
 type HealthResponse struct {
 	Status string `json:"status"`
@@ -296,6 +503,11 @@ func (s *HealthResponse) GetStatus() string {
 func (s *HealthResponse) SetStatus(val string) {
 	s.Status = val
 }
+
+// InitiateLoginFound is response for InitiateLogin operation.
+type InitiateLoginFound struct{}
+
+func (*InitiateLoginFound) initiateLoginRes() {}
 
 type ListProjectsOKApplicationJSON []Project
 
@@ -328,6 +540,103 @@ func (*ListUserGroupsOKApplicationJSON) listUserGroupsRes() {}
 type ListUsersOKApplicationJSON []User
 
 func (*ListUsersOKApplicationJSON) listUsersRes() {}
+
+// LogoutNoContent is response for Logout operation.
+type LogoutNoContent struct{}
+
+func (*LogoutNoContent) logoutRes() {}
+
+// NewOptDateTime returns new OptDateTime with value set to v.
+func NewOptDateTime(v time.Time) OptDateTime {
+	return OptDateTime{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDateTime is optional time.Time.
+type OptDateTime struct {
+	Value time.Time
+	Set   bool
+}
+
+// IsSet returns true if OptDateTime was set.
+func (o OptDateTime) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDateTime) Reset() {
+	var v time.Time
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDateTime) SetTo(v time.Time) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDateTime) Get() (v time.Time, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptURI returns new OptURI with value set to v.
+func NewOptURI(v url.URL) OptURI {
+	return OptURI{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptURI is optional url.URL.
+type OptURI struct {
+	Value url.URL
+	Set   bool
+}
+
+// IsSet returns true if OptURI was set.
+func (o OptURI) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptURI) Reset() {
+	var v url.URL
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptURI) SetTo(v url.URL) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptURI) Get() (v url.URL, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptURI) Or(d url.URL) url.URL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // Ref: #/components/schemas/Project
 type Project struct {
@@ -564,6 +873,88 @@ func (s *RoleAttribute) SetName(val string) {
 // SetDescription sets the value of Description.
 func (s *RoleAttribute) SetDescription(val string) {
 	s.Description = val
+}
+
+// Ref: #/components/schemas/TeamMembership
+type TeamMembership struct {
+	// GitHub organization name.
+	OrgName string `json:"org_name"`
+	// GitHub team name.
+	TeamName string `json:"team_name"`
+	// User role in the team.
+	Role TeamMembershipRole `json:"role"`
+}
+
+// GetOrgName returns the value of OrgName.
+func (s *TeamMembership) GetOrgName() string {
+	return s.OrgName
+}
+
+// GetTeamName returns the value of TeamName.
+func (s *TeamMembership) GetTeamName() string {
+	return s.TeamName
+}
+
+// GetRole returns the value of Role.
+func (s *TeamMembership) GetRole() TeamMembershipRole {
+	return s.Role
+}
+
+// SetOrgName sets the value of OrgName.
+func (s *TeamMembership) SetOrgName(val string) {
+	s.OrgName = val
+}
+
+// SetTeamName sets the value of TeamName.
+func (s *TeamMembership) SetTeamName(val string) {
+	s.TeamName = val
+}
+
+// SetRole sets the value of Role.
+func (s *TeamMembership) SetRole(val TeamMembershipRole) {
+	s.Role = val
+}
+
+// User role in the team.
+type TeamMembershipRole string
+
+const (
+	TeamMembershipRoleMember     TeamMembershipRole = "member"
+	TeamMembershipRoleMaintainer TeamMembershipRole = "maintainer"
+)
+
+// AllValues returns all TeamMembershipRole values.
+func (TeamMembershipRole) AllValues() []TeamMembershipRole {
+	return []TeamMembershipRole{
+		TeamMembershipRoleMember,
+		TeamMembershipRoleMaintainer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TeamMembershipRole) MarshalText() ([]byte, error) {
+	switch s {
+	case TeamMembershipRoleMember:
+		return []byte(s), nil
+	case TeamMembershipRoleMaintainer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TeamMembershipRole) UnmarshalText(data []byte) error {
+	switch TeamMembershipRole(data) {
+	case TeamMembershipRoleMember:
+		*s = TeamMembershipRoleMember
+		return nil
+	case TeamMembershipRoleMaintainer:
+		*s = TeamMembershipRoleMaintainer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type UpdateProjectBadRequest ErrorResponse

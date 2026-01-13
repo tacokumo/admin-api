@@ -17,6 +17,7 @@ import (
 
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
+	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 )
@@ -43,7 +44,7 @@ type Invoker interface {
 	// CreateUser invokes createUser operation.
 	//
 	// Create a new user.
-	// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+	// Admin上で管理するユーザを作成するだけであり､真実源はGitHubで管理される.
 	//
 	// POST /v1alpha1/users
 	CreateUser(ctx context.Context, request *CreateUserRequest) (CreateUserRes, error)
@@ -53,6 +54,13 @@ type Invoker interface {
 	//
 	// POST /v1alpha1/projects/{projectId}/usergroups
 	CreateUserGroup(ctx context.Context, request *CreateUserGroupRequest, params CreateUserGroupParams) (CreateUserGroupRes, error)
+	// GetCurrentUser invokes getCurrentUser operation.
+	//
+	// Returns information about the currently authenticated user,
+	// including their bearer token for API access.
+	//
+	// GET /v1alpha1/auth/me
+	GetCurrentUser(ctx context.Context) (GetCurrentUserRes, error)
 	// GetLivenessCheck invokes getLivenessCheck operation.
 	//
 	// Check if the service is alive.
@@ -83,6 +91,20 @@ type Invoker interface {
 	//
 	// GET /v1alpha1/projects/{projectId}/usergroups/{groupId}
 	GetUserGroup(ctx context.Context, params GetUserGroupParams) (GetUserGroupRes, error)
+	// HandleOAuthCallback invokes handleOAuthCallback operation.
+	//
+	// Handles the GitHub OAuth callback, exchanges the authorization code for tokens,
+	// creates a user session, and redirects to the frontend.
+	//
+	// GET /v1alpha1/auth/callback
+	HandleOAuthCallback(ctx context.Context, params HandleOAuthCallbackParams) (HandleOAuthCallbackRes, error)
+	// InitiateLogin invokes initiateLogin operation.
+	//
+	// Initiates the GitHub OAuth authentication flow.
+	// Redirects the user to GitHub for authentication.
+	//
+	// GET /v1alpha1/auth/login
+	InitiateLogin(ctx context.Context, params InitiateLoginParams) (InitiateLoginRes, error)
 	// ListProjects invokes listProjects operation.
 	//
 	// Retrieve a list of all projects.
@@ -107,6 +129,19 @@ type Invoker interface {
 	//
 	// GET /v1alpha1/users
 	ListUsers(ctx context.Context, params ListUsersParams) (ListUsersRes, error)
+	// Logout invokes logout operation.
+	//
+	// Invalidates the user session and clears authentication cookies.
+	//
+	// POST /v1alpha1/auth/logout
+	Logout(ctx context.Context) (LogoutRes, error)
+	// RefreshToken invokes refreshToken operation.
+	//
+	// Refreshes the GitHub access token using the refresh token.
+	// Updates the user session with new tokens.
+	//
+	// POST /v1alpha1/auth/refresh
+	RefreshToken(ctx context.Context) (RefreshTokenRes, error)
 	// UpdateProject invokes updateProject operation.
 	//
 	// Update an existing project.
@@ -130,6 +165,7 @@ type Invoker interface {
 // Client implements OAS client.
 type Client struct {
 	serverURL *url.URL
+	sec       SecuritySource
 	baseClient
 }
 
@@ -138,7 +174,7 @@ var _ Handler = struct {
 }{}
 
 // NewClient initializes new Client defined by OAS.
-func NewClient(serverURL string, opts ...ClientOption) (*Client, error) {
+func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Client, error) {
 	u, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
@@ -151,6 +187,7 @@ func NewClient(serverURL string, opts ...ClientOption) (*Client, error) {
 	}
 	return &Client{
 		serverURL:  u,
+		sec:        sec,
 		baseClient: c,
 	}, nil
 }
@@ -227,6 +264,51 @@ func (c *Client) sendCreateProject(ctx context.Context, request *CreateProjectRe
 	}
 	if err := encodeCreateProjectRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, CreateProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -342,7 +424,7 @@ func (c *Client) sendCreateRole(ctx context.Context, request *CreateRoleRequest,
 // CreateUser invokes createUser operation.
 //
 // Create a new user.
-// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+// Admin上で管理するユーザを作成するだけであり､真実源はGitHubで管理される.
 //
 // POST /v1alpha1/users
 func (c *Client) CreateUser(ctx context.Context, request *CreateUserRequest) (CreateUserRes, error) {
@@ -397,6 +479,51 @@ func (c *Client) sendCreateUser(ctx context.Context, request *CreateUserRequest)
 	}
 	if err := encodeCreateUserRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateUserOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, CreateUserOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -502,6 +629,124 @@ func (c *Client) sendCreateUserGroup(ctx context.Context, request *CreateUserGro
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateUserGroupResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetCurrentUser invokes getCurrentUser operation.
+//
+// Returns information about the currently authenticated user,
+// including their bearer token for API access.
+//
+// GET /v1alpha1/auth/me
+func (c *Client) GetCurrentUser(ctx context.Context) (GetCurrentUserRes, error) {
+	res, err := c.sendGetCurrentUser(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetCurrentUser(ctx context.Context) (res GetCurrentUserRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getCurrentUser"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/v1alpha1/auth/me"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetCurrentUserOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/v1alpha1/auth/me"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetCurrentUserOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, GetCurrentUserOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetCurrentUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -653,6 +898,51 @@ func (c *Client) sendGetProject(ctx context.Context, params GetProjectParams) (r
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, GetProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -961,6 +1251,205 @@ func (c *Client) sendGetUserGroup(ctx context.Context, params GetUserGroupParams
 	return result, nil
 }
 
+// HandleOAuthCallback invokes handleOAuthCallback operation.
+//
+// Handles the GitHub OAuth callback, exchanges the authorization code for tokens,
+// creates a user session, and redirects to the frontend.
+//
+// GET /v1alpha1/auth/callback
+func (c *Client) HandleOAuthCallback(ctx context.Context, params HandleOAuthCallbackParams) (HandleOAuthCallbackRes, error) {
+	res, err := c.sendHandleOAuthCallback(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendHandleOAuthCallback(ctx context.Context, params HandleOAuthCallbackParams) (res HandleOAuthCallbackRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("handleOAuthCallback"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/v1alpha1/auth/callback"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, HandleOAuthCallbackOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/v1alpha1/auth/callback"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "code" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "code",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Code))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "state" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "state",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.State))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeHandleOAuthCallbackResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// InitiateLogin invokes initiateLogin operation.
+//
+// Initiates the GitHub OAuth authentication flow.
+// Redirects the user to GitHub for authentication.
+//
+// GET /v1alpha1/auth/login
+func (c *Client) InitiateLogin(ctx context.Context, params InitiateLoginParams) (InitiateLoginRes, error) {
+	res, err := c.sendInitiateLogin(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendInitiateLogin(ctx context.Context, params InitiateLoginParams) (res InitiateLoginRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("initiateLogin"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/v1alpha1/auth/login"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, InitiateLoginOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/v1alpha1/auth/login"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "redirect_uri" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "redirect_uri",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.RedirectURI.Get(); ok {
+				return e.EncodeValue(conv.URLToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeInitiateLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListProjects invokes listProjects operation.
 //
 // Retrieve a list of all projects.
@@ -1047,6 +1536,51 @@ func (c *Client) sendListProjects(ctx context.Context, params ListProjectsParams
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListProjectsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, ListProjectsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"
@@ -1399,6 +1933,51 @@ func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res
 		return res, errors.Wrap(err, "create request")
 	}
 
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListUsersOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, ListUsersOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
 	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
@@ -1408,6 +1987,241 @@ func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res
 
 	stage = "DecodeResponse"
 	result, err := decodeListUsersResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// Logout invokes logout operation.
+//
+// Invalidates the user session and clears authentication cookies.
+//
+// POST /v1alpha1/auth/logout
+func (c *Client) Logout(ctx context.Context) (LogoutRes, error) {
+	res, err := c.sendLogout(ctx)
+	return res, err
+}
+
+func (c *Client) sendLogout(ctx context.Context) (res LogoutRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("logout"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/v1alpha1/auth/logout"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, LogoutOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/v1alpha1/auth/logout"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, LogoutOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, LogoutOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeLogoutResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RefreshToken invokes refreshToken operation.
+//
+// Refreshes the GitHub access token using the refresh token.
+// Updates the user session with new tokens.
+//
+// POST /v1alpha1/auth/refresh
+func (c *Client) RefreshToken(ctx context.Context) (RefreshTokenRes, error) {
+	res, err := c.sendRefreshToken(ctx)
+	return res, err
+}
+
+func (c *Client) sendRefreshToken(ctx context.Context) (res RefreshTokenRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("refreshToken"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/v1alpha1/auth/refresh"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RefreshTokenOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/v1alpha1/auth/refresh"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RefreshTokenOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, RefreshTokenOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRefreshTokenResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -1490,6 +2304,51 @@ func (c *Client) sendUpdateProject(ctx context.Context, request *UpdateProjectRe
 	}
 	if err := encodeUpdateProjectRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+		{
+			stage = "Security:CookieAuth"
+			switch err := c.securityCookieAuth(ctx, UpdateProjectOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"CookieAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
 	}
 
 	stage = "SendRequest"

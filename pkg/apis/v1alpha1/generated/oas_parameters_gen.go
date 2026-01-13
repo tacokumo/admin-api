@@ -453,6 +453,174 @@ func decodeGetUserGroupParams(args [2]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// HandleOAuthCallbackParams is parameters of handleOAuthCallback operation.
+type HandleOAuthCallbackParams struct {
+	// Authorization code from GitHub.
+	Code string
+	// State parameter for CSRF protection.
+	State string
+}
+
+func unpackHandleOAuthCallbackParams(packed middleware.Parameters) (params HandleOAuthCallbackParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "code",
+			In:   "query",
+		}
+		params.Code = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "state",
+			In:   "query",
+		}
+		params.State = packed[key].(string)
+	}
+	return params
+}
+
+func decodeHandleOAuthCallbackParams(args [0]string, argsEscaped bool, r *http.Request) (params HandleOAuthCallbackParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: code.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "code",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Code = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "code",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: state.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "state",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.State = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "state",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// InitiateLoginParams is parameters of initiateLogin operation.
+type InitiateLoginParams struct {
+	// URI to redirect to after successful authentication.
+	RedirectURI OptURI
+}
+
+func unpackInitiateLoginParams(packed middleware.Parameters) (params InitiateLoginParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "redirect_uri",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.RedirectURI = v.(OptURI)
+		}
+	}
+	return params
+}
+
+func decodeInitiateLoginParams(args [0]string, argsEscaped bool, r *http.Request) (params InitiateLoginParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: redirect_uri.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "redirect_uri",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotRedirectURIVal url.URL
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToURL(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotRedirectURIVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.RedirectURI.SetTo(paramsDotRedirectURIVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "redirect_uri",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListProjectsParams is parameters of listProjects operation.
 type ListProjectsParams struct {
 	// Maximum number of projects to return.

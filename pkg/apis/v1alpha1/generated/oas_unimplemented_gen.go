@@ -34,7 +34,7 @@ func (UnimplementedHandler) CreateRole(ctx context.Context, req *CreateRoleReque
 // CreateUser implements createUser operation.
 //
 // Create a new user.
-// Admin上で管理するユーザを作成するだけであり､真実源はAuth0で管理される.
+// Admin上で管理するユーザを作成するだけであり､真実源はGitHubで管理される.
 //
 // POST /v1alpha1/users
 func (UnimplementedHandler) CreateUser(ctx context.Context, req *CreateUserRequest) (r CreateUserRes, _ error) {
@@ -47,6 +47,16 @@ func (UnimplementedHandler) CreateUser(ctx context.Context, req *CreateUserReque
 //
 // POST /v1alpha1/projects/{projectId}/usergroups
 func (UnimplementedHandler) CreateUserGroup(ctx context.Context, req *CreateUserGroupRequest, params CreateUserGroupParams) (r CreateUserGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetCurrentUser implements getCurrentUser operation.
+//
+// Returns information about the currently authenticated user,
+// including their bearer token for API access.
+//
+// GET /v1alpha1/auth/me
+func (UnimplementedHandler) GetCurrentUser(ctx context.Context) (r GetCurrentUserRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -95,6 +105,26 @@ func (UnimplementedHandler) GetUserGroup(ctx context.Context, params GetUserGrou
 	return r, ht.ErrNotImplemented
 }
 
+// HandleOAuthCallback implements handleOAuthCallback operation.
+//
+// Handles the GitHub OAuth callback, exchanges the authorization code for tokens,
+// creates a user session, and redirects to the frontend.
+//
+// GET /v1alpha1/auth/callback
+func (UnimplementedHandler) HandleOAuthCallback(ctx context.Context, params HandleOAuthCallbackParams) (r HandleOAuthCallbackRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// InitiateLogin implements initiateLogin operation.
+//
+// Initiates the GitHub OAuth authentication flow.
+// Redirects the user to GitHub for authentication.
+//
+// GET /v1alpha1/auth/login
+func (UnimplementedHandler) InitiateLogin(ctx context.Context, params InitiateLoginParams) (r InitiateLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListProjects implements listProjects operation.
 //
 // Retrieve a list of all projects.
@@ -128,6 +158,25 @@ func (UnimplementedHandler) ListUserGroups(ctx context.Context, params ListUserG
 //
 // GET /v1alpha1/users
 func (UnimplementedHandler) ListUsers(ctx context.Context, params ListUsersParams) (r ListUsersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// Logout implements logout operation.
+//
+// Invalidates the user session and clears authentication cookies.
+//
+// POST /v1alpha1/auth/logout
+func (UnimplementedHandler) Logout(ctx context.Context) (r LogoutRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RefreshToken implements refreshToken operation.
+//
+// Refreshes the GitHub access token using the refresh token.
+// Updates the user session with new tokens.
+//
+// POST /v1alpha1/auth/refresh
+func (UnimplementedHandler) RefreshToken(ctx context.Context) (r RefreshTokenRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

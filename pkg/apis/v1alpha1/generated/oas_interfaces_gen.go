@@ -17,6 +17,10 @@ type CreateUserRes interface {
 	createUserRes()
 }
 
+type GetCurrentUserRes interface {
+	getCurrentUserRes()
+}
+
 type GetProjectRes interface {
 	getProjectRes()
 }
@@ -27,6 +31,14 @@ type GetRoleRes interface {
 
 type GetUserGroupRes interface {
 	getUserGroupRes()
+}
+
+type HandleOAuthCallbackRes interface {
+	handleOAuthCallbackRes()
+}
+
+type InitiateLoginRes interface {
+	initiateLoginRes()
 }
 
 type ListProjectsRes interface {
@@ -43,6 +55,14 @@ type ListUserGroupsRes interface {
 
 type ListUsersRes interface {
 	listUsersRes()
+}
+
+type LogoutRes interface {
+	logoutRes()
+}
+
+type RefreshTokenRes interface {
+	refreshTokenRes()
 }
 
 type UpdateProjectRes interface {

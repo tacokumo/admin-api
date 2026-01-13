@@ -53,7 +53,7 @@ var _ = Describe("v1alpha liveness check", func() {
 
 	It("should return ok", func(ctx context.Context) {
 		queries := admindb.New(pgxPool)
-		svc := v1alpha1.NewService(slog.Default(), queries)
+		svc := v1alpha1.NewService(slog.Default(), queries, nil, nil, nil, "", 0)
 		resp, err := svc.GetLivenessCheck(ctx)
 		Expect(err).Should(Succeed())
 		Expect(resp).ShouldNot(BeNil())

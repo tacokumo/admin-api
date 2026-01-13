@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/tacokumo/admin-api/pkg/envconfig"
@@ -13,16 +14,25 @@ type Config struct {
 	Port          string        `env:"PORT" yaml:"port"`
 	AdminDBConfig AdminDBConfig `yaml:"admin_db"`
 	Auth          AuthConfig    `yaml:"auth"`
+	Redis         RedisConfig   `yaml:"redis"`
 	CORS          CORSConfig    `yaml:"cors"`
 	TLS           TLSConfig     `yaml:"tls"`
 }
 
 type AuthConfig struct {
-	CognitoRegion     string `env:"COGNITO_REGION" yaml:"region"`
-	CognitoUserPoolID string `env:"COGNITO_USER_POOL_ID" yaml:"user_pool_id"`
-	CognitoClientID   string `env:"COGNITO_CLIENT_ID" yaml:"client_id"`
-	// CognitoClientSecret is required only when you use Cognito Management API.
-	CognitoClientSecret string `env:"COGNITO_CLIENT_SECRET" yaml:"client_secret"`
+	GitHubClientID     string        `env:"GITHUB_CLIENT_ID" yaml:"client_id"`
+	GitHubClientSecret string        `env:"GITHUB_CLIENT_SECRET" yaml:"client_secret"`
+	CallbackURL        string        `env:"GITHUB_CALLBACK_URL" yaml:"callback_url"`
+	FrontendURL        string        `env:"FRONTEND_URL" yaml:"frontend_url"`
+	AllowedOrgs        []string      `env:"GITHUB_ALLOWED_ORGS" yaml:"allowed_orgs"`
+	SessionTTL         time.Duration `env:"SESSION_TTL" yaml:"session_ttl"`
+}
+
+type RedisConfig struct {
+	Host     string `env:"REDIS_HOST" yaml:"host"`
+	Port     int    `env:"REDIS_PORT" yaml:"port"`
+	Password string `env:"REDIS_PASSWORD" yaml:"password"`
+	DB       int    `env:"REDIS_DB" yaml:"db"`
 }
 
 type AdminDBConfig struct {

@@ -61,6 +61,134 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			switch elem[0] {
+			case 'a': // Prefix: "auth/"
+
+				if l := len("auth/"); len(elem) >= l && elem[0:l] == "auth/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'c': // Prefix: "callback"
+
+					if l := len("callback"); len(elem) >= l && elem[0:l] == "callback" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleHandleOAuthCallbackRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+				case 'l': // Prefix: "log"
+
+					if l := len("log"); len(elem) >= l && elem[0:l] == "log" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'i': // Prefix: "in"
+
+						if l := len("in"); len(elem) >= l && elem[0:l] == "in" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleInitiateLoginRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "GET")
+							}
+
+							return
+						}
+
+					case 'o': // Prefix: "out"
+
+						if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleLogoutRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
+
+					}
+
+				case 'm': // Prefix: "me"
+
+					if l := len("me"); len(elem) >= l && elem[0:l] == "me" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleGetCurrentUserRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+				case 'r': // Prefix: "refresh"
+
+					if l := len("refresh"); len(elem) >= l && elem[0:l] == "refresh" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleRefreshTokenRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+
+				}
+
 			case 'h': // Prefix: "health/"
 
 				if l := len("health/"); len(elem) >= l && elem[0:l] == "health/" {
@@ -432,6 +560,154 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				break
 			}
 			switch elem[0] {
+			case 'a': // Prefix: "auth/"
+
+				if l := len("auth/"); len(elem) >= l && elem[0:l] == "auth/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'c': // Prefix: "callback"
+
+					if l := len("callback"); len(elem) >= l && elem[0:l] == "callback" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = HandleOAuthCallbackOperation
+							r.summary = "Handle OAuth callback"
+							r.operationID = "handleOAuthCallback"
+							r.pathPattern = "/v1alpha1/auth/callback"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'l': // Prefix: "log"
+
+					if l := len("log"); len(elem) >= l && elem[0:l] == "log" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'i': // Prefix: "in"
+
+						if l := len("in"); len(elem) >= l && elem[0:l] == "in" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = InitiateLoginOperation
+								r.summary = "Initiate OAuth login"
+								r.operationID = "initiateLogin"
+								r.pathPattern = "/v1alpha1/auth/login"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					case 'o': // Prefix: "out"
+
+						if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = LogoutOperation
+								r.summary = "Logout user"
+								r.operationID = "logout"
+								r.pathPattern = "/v1alpha1/auth/logout"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					}
+
+				case 'm': // Prefix: "me"
+
+					if l := len("me"); len(elem) >= l && elem[0:l] == "me" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = GetCurrentUserOperation
+							r.summary = "Get current user"
+							r.operationID = "getCurrentUser"
+							r.pathPattern = "/v1alpha1/auth/me"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'r': // Prefix: "refresh"
+
+					if l := len("refresh"); len(elem) >= l && elem[0:l] == "refresh" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = RefreshTokenOperation
+							r.summary = "Refresh access token"
+							r.operationID = "refreshToken"
+							r.pathPattern = "/v1alpha1/auth/refresh"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				}
+
 			case 'h': // Prefix: "health/"
 
 				if l := len("health/"); len(elem) >= l && elem[0:l] == "health/" {

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,8 +16,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/redis/go-redis/v9"
+	"github.com/samber/lo"
 	adminv1alpha1 "github.com/tacokumo/admin-api/pkg/apis/v1alpha1"
 	adminv1alpha1generated "github.com/tacokumo/admin-api/pkg/apis/v1alpha1/generated"
+	"github.com/tacokumo/admin-api/pkg/auth/oauth"
+	"github.com/tacokumo/admin-api/pkg/auth/session"
 	"github.com/tacokumo/admin-api/pkg/config"
 	"github.com/tacokumo/admin-api/pkg/db/admindb"
 	"github.com/tacokumo/admin-api/pkg/middleware"
@@ -45,20 +50,51 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 		e:      echo.New(),
 	}
 
-	// Setup
+	var cleanups []func(context.Context)
+
+	// Initialize Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		return nil, errors.Wrap(err, "failed to connect to Redis")
+	}
+	cleanups = append(cleanups, func(ctx context.Context) {
+		if err := redisClient.Close(); err != nil {
+			logger.ErrorContext(ctx, "failed to close Redis connection", slog.String("error", err.Error()))
+		}
+	})
+
+	// Initialize session stores
+	sessionTTL := cfg.Auth.SessionTTL
+	if sessionTTL == 0 {
+		sessionTTL = 24 * time.Hour
+	}
+	sessionStore := session.NewRedisStore(redisClient, sessionTTL)
+	stateStore := session.NewRedisStore(redisClient, 10*time.Minute) // Short TTL for OAuth state
+
+	// Initialize GitHub OAuth client
+	githubClient := oauth.NewGitHubClient(
+		cfg.Auth.GitHubClientID,
+		cfg.Auth.GitHubClientSecret,
+		cfg.Auth.CallbackURL,
+		cfg.Auth.AllowedOrgs,
+	)
+
+	// Setup middleware
 	s.e.Use(middleware.Logger(logger))
 	corsConfig := setupCORSConfig(cfg)
 	s.e.Use(echomiddleware.CORSWithConfig(corsConfig))
-	jwtValidateMiddleware, err := middleware.JWTMiddleware(logger, cfg.Auth.CognitoRegion, cfg.Auth.CognitoUserPoolID, 5*time.Minute, []string{cfg.Auth.CognitoClientID})
-	if err != nil {
-		return s, errors.Wrapf(err, "failed to create JWT middleware")
-	}
-	s.e.Use(jwtValidateMiddleware)
+	sessionMiddleware := middleware.SessionMiddleware(logger, sessionStore)
+	s.e.Use(sessionMiddleware)
 
-	opts, cleanups, err := initAdminServerConfig(ctx, logger)
+	opts, otelCleanups, err := initAdminServerConfig(ctx, logger)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initialize admin server config")
 	}
+	cleanups = append(cleanups, otelCleanups...)
 
 	adminDBConfig := pg.Config{
 		Host:     cfg.AdminDBConfig.Host,
@@ -106,18 +142,186 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	}
 	queries := admindb.New(p)
 
-	v1alpha1Service, err := adminv1alpha1generated.NewServer(
-		adminv1alpha1.NewService(logger, queries),
+	// Create service with OAuth dependencies
+	service := adminv1alpha1.NewService(
+		logger,
+		queries,
+		githubClient,
+		sessionStore,
+		stateStore,
+		cfg.Auth.FrontendURL,
+		sessionTTL,
+	)
+
+	v1alpha1Server, err := adminv1alpha1generated.NewServer(
+		service,
+		service,
 		opts...,
 	)
 	if err != nil {
 		return s, errors.Wrapf(err, "failed to create v1alpha1 server")
 	}
+
+	// Register OAuth endpoints with Echo for proper redirect support
+	s.e.GET("/v1alpha1/auth/login", createLoginHandler(logger, githubClient, stateStore))
+	s.e.GET("/v1alpha1/auth/callback", createCallbackHandler(logger, githubClient, sessionStore, stateStore, cfg.Auth.FrontendURL, sessionTTL))
+
 	v1alphaGroup := s.e.Group("/v1alpha1")
-	v1alphaGroup.Any("/*", echo.WrapHandler(v1alpha1Service))
+	v1alphaGroup.Any("/*", echo.WrapHandler(v1alpha1Server))
 
 	s.cleanups = cleanups
 	return s, nil
+}
+
+func createLoginHandler(
+	logger *slog.Logger,
+	githubClient *oauth.GitHubClient,
+	stateStore session.Store,
+) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		// Generate CSRF state
+		state, err := session.GenerateSessionID()
+		if err != nil {
+			logger.ErrorContext(c.Request().Context(), "failed to generate state", slog.String("error", err.Error()))
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		}
+
+		// Store state with optional redirect_uri
+		redirectURI := c.QueryParam("redirect_uri")
+		stateSession := &session.Session{
+			ID:        state,
+			ExpiresAt: time.Now().Add(10 * time.Minute),
+			CreatedAt: time.Now(),
+		}
+		if redirectURI != "" {
+			stateSession.Name = redirectURI // Reuse Name field for redirect_uri
+		}
+
+		if err := stateStore.Create(c.Request().Context(), stateSession); err != nil {
+			logger.ErrorContext(c.Request().Context(), "failed to store state", slog.String("error", err.Error()))
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		}
+
+		// Redirect to GitHub
+		authURL := githubClient.GetAuthURL(state)
+		return c.Redirect(http.StatusFound, authURL)
+	}
+}
+
+func createCallbackHandler(
+	logger *slog.Logger,
+	githubClient *oauth.GitHubClient,
+	sessionStore session.Store,
+	stateStore session.Store,
+	frontendURL string,
+	sessionTTL time.Duration,
+) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		code := c.QueryParam("code")
+		state := c.QueryParam("state")
+
+		if code == "" || state == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing code or state"})
+		}
+
+		// Validate state (CSRF protection)
+		stateSession, err := stateStore.Get(ctx, state)
+		if err != nil {
+			logger.ErrorContext(ctx, "invalid state", slog.String("error", err.Error()))
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid state"})
+		}
+
+		// Delete state after validation
+		_ = stateStore.Delete(ctx, state)
+
+		// Exchange code for token
+		token, err := githubClient.ExchangeCode(ctx, code)
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to exchange code", slog.String("error", err.Error()))
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authentication failed"})
+		}
+
+		// Get user info
+		ghUser, err := githubClient.GetUser(ctx, token)
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to get user info", slog.String("error", err.Error()))
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "failed to get user info"})
+		}
+
+		// Validate org membership
+		orgs, err := githubClient.GetUserOrgs(ctx, token)
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to get user orgs", slog.String("error", err.Error()))
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "failed to get user orgs"})
+		}
+
+		if !githubClient.ValidateOrgMembership(orgs) {
+			logger.WarnContext(ctx, "user not in allowed org", slog.String("username", ghUser.Login))
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "not authorized: not a member of allowed organizations"})
+		}
+
+		// Get team memberships
+		teams, err := githubClient.GetTeamMemberships(ctx, token)
+		if err != nil {
+			logger.WarnContext(ctx, "failed to get team memberships", slog.String("error", err.Error()))
+			teams = []oauth.TeamMembership{}
+		}
+
+		// Generate session ID
+		sessionID, err := session.GenerateSessionID()
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to generate session ID", slog.String("error", err.Error()))
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		}
+
+		// Create session
+		sess := &session.Session{
+			ID:             sessionID,
+			UserID:         fmt.Sprintf("%d", ghUser.ID),
+			GitHubUserID:   ghUser.ID,
+			GitHubUsername: ghUser.Login,
+			Email:          ghUser.Email,
+			Name:           ghUser.Name,
+			AvatarURL:      ghUser.AvatarURL,
+			AccessToken:    token.AccessToken,
+			RefreshToken:   token.RefreshToken,
+			TeamMemberships: lo.Map(teams, func(tm oauth.TeamMembership, _ int) session.TeamMembership {
+				return session.TeamMembership{
+					OrgName:  tm.OrgName,
+					TeamName: tm.TeamName,
+					Role:     tm.Role,
+				}
+			}),
+			ExpiresAt: time.Now().Add(sessionTTL),
+			CreatedAt: time.Now(),
+		}
+
+		if err := sessionStore.Create(ctx, sess); err != nil {
+			logger.ErrorContext(ctx, "failed to create session", slog.String("error", err.Error()))
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		}
+
+		// Set session cookie
+		c.SetCookie(&http.Cookie{
+			Name:     "session_id",
+			Value:    sessionID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   int(sessionTTL.Seconds()),
+		})
+
+		// Redirect to frontend
+		redirectURL := frontendURL
+		if stateSession.Name != "" {
+			redirectURL = stateSession.Name // Use stored redirect_uri
+		}
+		redirectURL = fmt.Sprintf("%s?token=%s", redirectURL, sessionID)
+
+		return c.Redirect(http.StatusFound, redirectURL)
+	}
 }
 
 func (s *Server) Start(ctx context.Context) error {

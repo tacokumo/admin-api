@@ -2,3 +2,4 @@ bin/
 .cache/
 tools/
 .env
+.direnv
