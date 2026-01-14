@@ -75,7 +75,11 @@ func (c *GitHubClient) GetUser(ctx context.Context, token *oauth2.Token) (*GitHu
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user info")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = errors.CombineErrors(err, errors.Wrap(closeErr, "failed to close response body"))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Newf("github api returned status %d", resp.StatusCode)
@@ -102,7 +106,11 @@ func (c *GitHubClient) getPrimaryEmail(ctx context.Context, client *http.Client)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get user emails")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = errors.CombineErrors(err, errors.Wrap(closeErr, "failed to close response body"))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", errors.Newf("github api returned status %d for emails", resp.StatusCode)
@@ -133,7 +141,11 @@ func (c *GitHubClient) GetUserOrgs(ctx context.Context, token *oauth2.Token) ([]
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user orgs")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = errors.CombineErrors(err, errors.Wrap(closeErr, "failed to close response body"))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Newf("github api returned status %d for orgs", resp.StatusCode)
@@ -168,7 +180,11 @@ func (c *GitHubClient) GetTeamMemberships(ctx context.Context, token *oauth2.Tok
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user teams")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = errors.CombineErrors(err, errors.Wrap(closeErr, "failed to close response body"))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Newf("github api returned status %d for teams", resp.StatusCode)

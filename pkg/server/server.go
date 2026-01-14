@@ -233,7 +233,9 @@ func createCallbackHandler(
 		}
 
 		// Delete state after validation
-		_ = stateStore.Delete(ctx, state)
+		if err := stateStore.Delete(ctx, state); err != nil {
+			logger.WarnContext(ctx, "failed to delete state", slog.String("error", err.Error()))
+		}
 
 		// Exchange code for token
 		token, err := githubClient.ExchangeCode(ctx, code)

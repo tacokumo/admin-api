@@ -4,6 +4,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/cockroachdb/errors"
 )
@@ -50,6 +51,16 @@ func loadFromEnvRecursive(v reflect.Value) error {
 		if tag := fieldType.Tag.Get("env"); tag != "" {
 			if envValue := os.Getenv(tag); envValue != "" {
 				if !field.CanSet() {
+					continue
+				}
+
+				// Handle time.Duration specially
+				if field.Type() == reflect.TypeOf(time.Duration(0)) {
+					duration, err := time.ParseDuration(envValue)
+					if err != nil {
+						return errors.Wrapf(err, "envconfig: parse duration for field %s", fieldType.Name)
+					}
+					field.Set(reflect.ValueOf(duration))
 					continue
 				}
 

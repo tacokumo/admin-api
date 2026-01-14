@@ -22,13 +22,11 @@ type Client interface {
 }
 
 type DefaultClient struct {
-	c                   http.Client
-	logger              *slog.Logger
-	serverBaseURL       string
-	cognitoDomain       string
-	cognitoRegion       string
-	cognitoClientID     string
-	cognitoClientSecret string
+	c             http.Client
+	logger        *slog.Logger
+	serverBaseURL string
+	oauthClient   *auth.OAuthClient
+	bearerToken   string
 }
 
 func NewDefaultClient(logger *slog.Logger, httpClient http.Client) *DefaultClient {
@@ -36,14 +34,26 @@ func NewDefaultClient(logger *slog.Logger, httpClient http.Client) *DefaultClien
 	if serverHost == "" {
 		serverHost = "localhost"
 	}
+
+	serverPort := os.Getenv("SERVER_PORT")
+	if serverPort == "" {
+		serverPort = "8444"
+	}
+
+	serverScheme := os.Getenv("SERVER_SCHEME")
+	if serverScheme == "" {
+		serverScheme = "https"
+	}
+
+	serverBaseURL := fmt.Sprintf("%s://%s:%s", serverScheme, serverHost, serverPort)
+	oauthClient := auth.NewOAuthClient(serverBaseURL)
+
 	return &DefaultClient{
-		c:                   httpClient,
-		logger:              logger.With(slog.String("component", "v1alpha1client")),
-		serverBaseURL:       fmt.Sprintf("https://%s:8444", serverHost),
-		cognitoDomain:       os.Getenv("COGNITO_DOMAIN"),
-		cognitoRegion:       os.Getenv("COGNITO_REGION"),
-		cognitoClientID:     os.Getenv("COGNITO_CLIENT_ID"),
-		cognitoClientSecret: os.Getenv("COGNITO_CLIENT_SECRET"),
+		c:             httpClient,
+		logger:        logger.With(slog.String("component", "v1alpha1client")),
+		serverBaseURL: serverBaseURL,
+		oauthClient:   oauthClient,
+		bearerToken:   "", // Will be set during authentication
 	}
 }
 
@@ -52,9 +62,8 @@ func (c *DefaultClient) post(
 	endpoint string,
 	reqBody any,
 ) (*http.Response, error) {
-	token, err := auth.RetrieveToken(c.cognitoDomain, c.cognitoRegion, c.cognitoClientID, c.cognitoClientSecret)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve token")
+	if err := c.ensureAuthenticated(ctx); err != nil {
+		return nil, errors.Wrap(err, "authentication failed")
 	}
 
 	reqBodyBytes, err := json.Marshal(reqBody)
@@ -66,7 +75,7 @@ func (c *DefaultClient) post(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create POST request")
 	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.bearerToken))
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := c.c.Do(req)
 	if err != nil {
@@ -81,9 +90,8 @@ func (c *DefaultClient) get(
 	endpoint string,
 	queryParams map[string]string,
 ) (*http.Response, error) {
-	token, err := auth.RetrieveToken(c.cognitoDomain, c.cognitoRegion, c.cognitoClientID, c.cognitoClientSecret)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve token")
+	if err := c.ensureAuthenticated(ctx); err != nil {
+		return nil, errors.Wrap(err, "authentication failed")
 	}
 
 	uri := fmt.Sprintf("%s%s", c.serverBaseURL, endpoint)
@@ -91,7 +99,7 @@ func (c *DefaultClient) get(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create GET request")
 	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.bearerToken))
 	q := req.URL.Query()
 	for k, v := range queryParams {
 		q.Add(k, v)
@@ -120,4 +128,62 @@ func (c *DefaultClient) ReadinessCheck(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to check readiness")
 	}
 	return nil
+}
+
+// ensureAuthenticated checks if the client has a valid bearer token and initiates OAuth if needed
+func (c *DefaultClient) ensureAuthenticated(ctx context.Context) error {
+	if c.bearerToken != "" {
+		// Verify token is still valid
+		_, err := c.oauthClient.GetCurrentUser(ctx, c.bearerToken)
+		if err == nil {
+			return nil // Token is valid
+		}
+		c.logger.WarnContext(ctx, "Bearer token appears to be invalid, re-authenticating", slog.String("error", err.Error()))
+	}
+
+	// Check if token is provided via environment variable
+	if envToken := os.Getenv("BEARER_TOKEN"); envToken != "" {
+		c.bearerToken = envToken
+		_, err := c.oauthClient.GetCurrentUser(ctx, c.bearerToken)
+		if err == nil {
+			c.logger.InfoContext(ctx, "Using bearer token from environment variable")
+			return nil
+		}
+		c.logger.WarnContext(ctx, "Bearer token from environment variable is invalid", slog.String("error", err.Error()))
+	}
+
+	// No valid token, need to authenticate
+	c.logger.InfoContext(ctx, "No valid authentication found, initiating OAuth flow")
+
+	// For CLI usage, we'll use a simplified approach
+	// In production, you might want to implement a proper OAuth callback server
+	fmt.Println("GitHub OAuth authentication required.")
+	fmt.Printf("Please visit: %s/v1alpha1/auth/login\n", c.serverBaseURL)
+	fmt.Println("After completing authentication in your browser, please enter your bearer token:")
+	fmt.Println("(You can get this from the browser's developer tools or by calling /v1alpha1/auth/me)")
+
+	var token string
+	if _, err := fmt.Scanln(&token); err != nil {
+		return errors.Wrap(err, "failed to read bearer token")
+	}
+
+	// Verify the token works
+	if _, err := c.oauthClient.GetCurrentUser(ctx, token); err != nil {
+		return errors.Wrap(err, "provided bearer token is invalid")
+	}
+
+	c.bearerToken = token
+	c.logger.InfoContext(ctx, "Authentication successful")
+	return nil
+}
+
+// Authenticate allows explicit authentication with OAuth
+func (c *DefaultClient) Authenticate(ctx context.Context) error {
+	c.bearerToken = "" // Force re-authentication
+	return c.ensureAuthenticated(ctx)
+}
+
+// SetBearerToken allows setting the bearer token directly (useful for testing or when token is known)
+func (c *DefaultClient) SetBearerToken(token string) {
+	c.bearerToken = token
 }
