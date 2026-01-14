@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -56,10 +57,23 @@ func (c *OAuthClient) InitiateOAuthFlow(ctx context.Context) (string, error) {
 		return "", errors.Wrap(err, "failed to generate state")
 	}
 
-	// Build login URL
-	loginURL := fmt.Sprintf("%s/v1alpha1/auth/login?redirect_uri=%s",
+	// Start local callback server first to get the port
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create listener")
+	}
+	defer func() {
+		_ = listener.Close()
+	}()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	callbackURL := fmt.Sprintf("http://localhost:%d/callback", port)
+
+	// Build login URL with dynamic callback URL
+	loginURL := fmt.Sprintf("%s/v1alpha1/auth/login?redirect_uri=%s&state=%s",
 		c.serverBaseURL,
-		url.QueryEscape("http://localhost:8080/callback"))
+		url.QueryEscape(callbackURL),
+		url.QueryEscape(state))
 
 	fmt.Printf("Please open the following URL in your browser to complete authentication:\n%s\n", loginURL)
 	fmt.Println("Waiting for authentication to complete...")
@@ -70,7 +84,7 @@ func (c *OAuthClient) InitiateOAuthFlow(ctx context.Context) (string, error) {
 	}
 
 	// Start local callback server
-	return c.waitForCallback(ctx, state)
+	return c.waitForCallbackWithListener(ctx, state, listener)
 }
 
 // GetCurrentUser retrieves current user information using a bearer token
@@ -105,27 +119,183 @@ func (c *OAuthClient) GetCurrentUser(ctx context.Context, bearerToken string) (*
 	return &user, nil
 }
 
-func (c *OAuthClient) waitForCallback(ctx context.Context, expectedState string) (string, error) {
-	// This is a simplified implementation for CLI usage
-	// In a real-world scenario, you might want to implement a proper callback server
-	// For now, we'll ask the user to manually provide the bearer token from /auth/me
-
-	fmt.Println("\nAfter completing authentication in your browser:")
-	fmt.Println("1. The browser should redirect you to a success page")
-	fmt.Println("2. Your session will be established automatically")
-	fmt.Println("3. Press Enter to continue...")
-
-	// Wait for user input
-	if _, err := fmt.Scanln(); err != nil {
-		// Ignore scan error as it's just waiting for user input
-		fmt.Printf("Input error (ignoring): %v\n", err)
+func (c *OAuthClient) waitForCallbackWithListener(ctx context.Context, expectedState string, listener net.Listener) (string, error) {
+	// Create server using the provided listener
+	callbackServer := &http.Server{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
 
-	// Try to get current user with session cookie approach
-	// This assumes the CLI and browser share cookies (which they don't)
-	// A better implementation would parse the callback URL or use a local server
+	// Channel to receive the token
+	tokenCh := make(chan string, 1)
+	errCh := make(chan error, 1)
 
-	return "", errors.New("interactive authentication required - please implement proper callback handling")
+	// Setup callback handler
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		// Handle POST requests from JavaScript
+		if r.Method == http.MethodPost {
+			token := r.URL.Query().Get("token")
+			if token == "" {
+				http.Error(w, "No token provided", http.StatusBadRequest)
+				return
+			}
+
+			// Validate token
+			if _, err := c.GetCurrentUser(ctx, token); err != nil {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				errCh <- errors.Wrap(err, "token validation failed")
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			// Send token to channel
+			select {
+			case tokenCh <- token:
+			default:
+			}
+			return
+		}
+
+		// Handle GET requests - Extract token from URL fragment (if using implicit flow)
+		// or from query parameters (if using authorization code flow)
+		token := r.URL.Query().Get("token")
+		state := r.URL.Query().Get("state")
+
+		// Note: We don't validate state here because the server generates its own state
+		// and handles CSRF protection. The client state was only used for initial request.
+		// The server's state is validated on the server side during the OAuth callback.
+
+		if token == "" {
+			// Show a page that will extract token from URL fragment using JavaScript
+			html := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Complete</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h2>Processing authentication...</h2>
+        <p>Please wait while we complete the authentication process.</p>
+    </div>
+    <script>
+        // Extract token from URL fragment and state from query params
+        const fragment = window.location.hash.substring(1);
+        const query = window.location.search.substring(1);
+        const fragmentParams = new URLSearchParams(fragment);
+        const queryParams = new URLSearchParams(query);
+        const token = fragmentParams.get('access_token') || fragmentParams.get('token') || queryParams.get('token');
+        const currentState = queryParams.get('state') || '` + state + `';
+
+        if (token) {
+            // Send token to callback endpoint
+            fetch('/callback?token=' + encodeURIComponent(token) + '&state=' + encodeURIComponent(currentState), {
+                method: 'POST'
+            }).then(() => {
+                document.getElementById('content').innerHTML =
+                    '<h2 class="success">✅ Authentication Successful!</h2>' +
+                    '<p>This window will close automatically in a few seconds...</p>';
+                // Close the tab after a short delay to show the success message
+                setTimeout(() => {
+                    window.close();
+                }, 2000);
+            }).catch(() => {
+                document.getElementById('content').innerHTML =
+                    '<h2 class="error">❌ Authentication Failed</h2>' +
+                    '<p>Please try again or check the CLI for error messages.</p>';
+            });
+        } else {
+            document.getElementById('content').innerHTML =
+                '<h2 class="error">❌ No Token Found</h2>' +
+                '<p>Authentication may have failed. Please try again.</p>';
+        }
+    </script>
+</body>
+</html>`
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(html))
+			return
+		}
+
+		// Validate token
+		if _, err := c.GetCurrentUser(ctx, token); err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			errCh <- errors.Wrap(err, "token validation failed")
+			return
+		}
+
+		// Success response
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		successHTML := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Complete</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h2 class="success">✅ Authentication Successful!</h2>
+    <p>This window will close automatically in a few seconds...</p>
+    <script>
+        setTimeout(() => {
+            window.close();
+        }, 2000);
+    </script>
+</body>
+</html>`
+		_, _ = w.Write([]byte(successHTML))
+
+		// Send token to channel
+		select {
+		case tokenCh <- token:
+		default:
+		}
+	})
+
+	callbackServer.Handler = mux
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	fmt.Printf("Started local callback server on port %d\n", port)
+
+	// Start server in background
+	go func() {
+		if err := callbackServer.Serve(listener); err != nil && err != http.ErrServerClosed {
+			errCh <- errors.Wrap(err, "callback server error")
+		}
+	}()
+
+	// Cleanup server when done
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = callbackServer.Shutdown(shutdownCtx)
+	}()
+
+	// Wait for token or error with timeout
+	select {
+	case token := <-tokenCh:
+		// Give a short delay to ensure the success message is shown in the browser
+		time.Sleep(100 * time.Millisecond)
+		return token, nil
+	case err := <-errCh:
+		return "", err
+	case <-time.After(5 * time.Minute):
+		return "", errors.New("authentication timeout - no response received within 5 minutes")
+	case <-ctx.Done():
+		return "", errors.Wrap(ctx.Err(), "context cancelled")
+	}
 }
 
 func generateRandomState() (string, error) {

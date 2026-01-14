@@ -1,36 +1,36 @@
 addr: "0.0.0.0"
 port: "8080"
 admin_db:
-  host: "postgresql"
+  host: "postgresql-prod"
   port: 5432
   user: "admin_api"
-  password: "password"
+  password: "production-password"
   db_name: "tacokumo_admin_db"
   initial_conn_retry: 10
 auth:
   client_id: ""  # Set via GITHUB_CLIENT_ID env var
   client_secret: ""  # Set via GITHUB_CLIENT_SECRET env var
-  callback_url: "http://localhost:8080/v1alpha1/auth/callback"
-  frontend_url: "http://localhost:3000"
+  callback_url: "https://api.yourdomain.com/v1alpha1/auth/callback"
+  frontend_url: "https://yourdomain.com"
   allowed_orgs: []  # Set via GITHUB_ALLOWED_ORGS env var
   session_ttl: 24h
 redis:
-  host: "valkey"
+  host: "redis-prod"
   port: 6379
-  password: ""
+  password: "redis-password"
   db: 0
 cors:
-  allow_origins: "https://localhost:8443,http://localhost:3000"
+  allow_origins: "https://yourdomain.com"
   allow_methods: "GET,POST,PUT,DELETE,OPTIONS"
   allow_headers: "Content-Type,Authorization"
   expose_headers: "Authorization"
   allow_credentials: true
   max_age: 86400
 tls:
-  enabled: false
+  enabled: true
   cert_file: /app/certs/api-server.crt
   key_file: /app/certs/api-server.key
 telemetry:
-  enabled: false
-  otlp_endpoint: ""
+  enabled: true
+  otlp_endpoint: "http://otel-collector:4317"
   timeout: 5s

@@ -90,7 +90,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 	sessionMiddleware := middleware.SessionMiddleware(logger, sessionStore)
 	s.e.Use(sessionMiddleware)
 
-	opts, otelCleanups, err := initAdminServerConfig(ctx, logger)
+	opts, otelCleanups, err := initAdminServerConfig(ctx, logger, cfg.Telemetry)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to initialize admin server config")
 	}
@@ -108,7 +108,10 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 		return s, errors.Wrapf(err, "failed to parse pgx config")
 	}
 
-	pgxConfig.ConnConfig.Tracer = otelpgx.NewTracer()
+	// Only enable pgx tracing if telemetry is enabled
+	if cfg.Telemetry.Enabled {
+		pgxConfig.ConnConfig.Tracer = otelpgx.NewTracer()
+	}
 
 	p, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 	if err != nil {
@@ -137,8 +140,11 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, 
 		return s, errors.New("failed to connect to admin db")
 	}
 
-	if err := otelpgx.RecordStats(p); err != nil {
-		return s, errors.Wrapf(err, "failed to record pgx stats")
+	// Only record pgx stats if telemetry is enabled
+	if cfg.Telemetry.Enabled {
+		if err := otelpgx.RecordStats(p); err != nil {
+			return s, errors.Wrapf(err, "failed to record pgx stats")
+		}
 	}
 	queries := admindb.New(p)
 
@@ -320,7 +326,7 @@ func createCallbackHandler(
 		if stateSession.Name != "" {
 			redirectURL = stateSession.Name // Use stored redirect_uri
 		}
-		redirectURL = fmt.Sprintf("%s?token=%s", redirectURL, sessionID)
+		redirectURL = fmt.Sprintf("%s?token=%s&state=%s", redirectURL, sessionID, state)
 
 		return c.Redirect(http.StatusFound, redirectURL)
 	}
@@ -352,17 +358,38 @@ func (s *Server) Start(ctx context.Context) error {
 func initAdminServerConfig(
 	ctx context.Context,
 	logger *slog.Logger,
+	telemetryCfg config.TelemetryConfig,
 ) ([]adminv1alpha1generated.ServerOption, []func(context.Context), error) {
 	var opts []adminv1alpha1generated.ServerOption
 	var cleanups []func(context.Context)
+
+	// If telemetry is disabled, return empty options
+	if !telemetryCfg.Enabled {
+		logger.InfoContext(ctx, "telemetry is disabled")
+		return opts, cleanups, nil
+	}
 
 	res, err := newResource()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create resource")
 	}
 
+	// Configure OTLP endpoint and timeout if specified
+	var traceExporterOpts []otlptracegrpc.Option
+	var metricExporterOpts []otlpmetricgrpc.Option
+
+	if telemetryCfg.OTLPEndpoint != "" {
+		traceExporterOpts = append(traceExporterOpts, otlptracegrpc.WithEndpoint(telemetryCfg.OTLPEndpoint))
+		metricExporterOpts = append(metricExporterOpts, otlpmetricgrpc.WithEndpoint(telemetryCfg.OTLPEndpoint))
+	}
+
+	if telemetryCfg.Timeout > 0 {
+		traceExporterOpts = append(traceExporterOpts, otlptracegrpc.WithTimeout(telemetryCfg.Timeout))
+		metricExporterOpts = append(metricExporterOpts, otlpmetricgrpc.WithTimeout(telemetryCfg.Timeout))
+	}
+
 	// STEP1: TracerProvider
-	traceExporter, err := otlptracegrpc.New(ctx)
+	traceExporter, err := otlptracegrpc.New(ctx, traceExporterOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create trace exporter")
 	}
@@ -382,7 +409,7 @@ func initAdminServerConfig(
 	opts = append(opts, adminv1alpha1generated.WithTracerProvider(tp))
 
 	// STEP2: MeterProvider
-	meterExporter, err := otlpmetricgrpc.New(ctx)
+	meterExporter, err := otlpmetricgrpc.New(ctx, metricExporterOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create meter exporter")
 	}

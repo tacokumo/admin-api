@@ -67,3 +67,21 @@ lint:
 submodule:
 	git submodule update --init --recursive
 	git submodule update --remote
+
+# Development environment management
+.PHONY: verify-setup
+verify-setup:
+	bash scripts/verify-setup.sh
+
+.PHONY: reset-dev-env
+reset-dev-env:
+	bash scripts/reset-dev-env.sh
+
+.PHONY: setup-env
+setup-env:
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		echo "Created .env from template. Please edit it with your GitHub OAuth credentials."; \
+	else \
+		echo ".env already exists"; \
+	fi

@@ -10,13 +10,14 @@ import (
 )
 
 type Config struct {
-	Addr          string        `env:"ADDR" yaml:"addr"`
-	Port          string        `env:"PORT" yaml:"port"`
-	AdminDBConfig AdminDBConfig `yaml:"admin_db"`
-	Auth          AuthConfig    `yaml:"auth"`
-	Redis         RedisConfig   `yaml:"redis"`
-	CORS          CORSConfig    `yaml:"cors"`
-	TLS           TLSConfig     `yaml:"tls"`
+	Addr          string          `env:"ADDR" yaml:"addr"`
+	Port          string          `env:"PORT" yaml:"port"`
+	AdminDBConfig AdminDBConfig   `yaml:"admin_db"`
+	Auth          AuthConfig      `yaml:"auth"`
+	Redis         RedisConfig     `yaml:"redis"`
+	CORS          CORSConfig      `yaml:"cors"`
+	TLS           TLSConfig       `yaml:"tls"`
+	Telemetry     TelemetryConfig `yaml:"telemetry"`
 }
 
 type AuthConfig struct {
@@ -57,6 +58,12 @@ type TLSConfig struct {
 	Enabled  bool   `env:"TLS_ENABLED" yaml:"enabled"`
 	CertFile string `env:"TLS_CERT_FILE" yaml:"cert_file"`
 	KeyFile  string `env:"TLS_KEY_FILE" yaml:"key_file"`
+}
+
+type TelemetryConfig struct {
+	Enabled      bool          `env:"TELEMETRY_ENABLED" yaml:"enabled"`
+	OTLPEndpoint string        `env:"OTLP_ENDPOINT" yaml:"otlp_endpoint"`
+	Timeout      time.Duration `env:"TELEMETRY_TIMEOUT" yaml:"timeout"`
 }
 
 func LoadFromEnv() (Config, error) {

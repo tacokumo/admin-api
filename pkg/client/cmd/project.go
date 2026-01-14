@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -36,7 +37,11 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 					InsecureSkipVerify: true,
 				},
 			}
-			client := v1alpha1.NewDefaultClient(logger, http.Client{Transport: transport})
+			httpClient := http.Client{
+				Transport: transport,
+				Timeout:   30 * time.Second, // 30 second timeout
+			}
+			client := v1alpha1.NewDefaultClient(logger, httpClient)
 
 			name, err := cmd.Flags().GetString("name")
 			if err != nil {
@@ -70,10 +75,11 @@ func newProjectCreateCommand(logger *slog.Logger) *cobra.Command {
 			}
 
 			if err := client.CreateProject(cmd.Context(), &reqBody); err != nil {
+				fmt.Printf("❌ Failed to create project: %v\n", err)
 				return errors.Wrapf(err, "failed to create project")
 			}
 
-			fmt.Println("project created successfullly")
+			fmt.Println("✅ Project created successfully")
 			return nil
 		},
 	}
@@ -95,14 +101,25 @@ func newProjectListCommand(logger *slog.Logger) *cobra.Command {
 					InsecureSkipVerify: true,
 				},
 			}
-			client := v1alpha1.NewDefaultClient(logger, http.Client{Transport: transport})
+			httpClient := http.Client{
+				Transport: transport,
+				Timeout:   30 * time.Second, // 30 second timeout
+			}
+			client := v1alpha1.NewDefaultClient(logger, httpClient)
 
+			fmt.Println("Fetching projects...")
 			projects, err := client.ListProjects(cmd.Context())
 			if err != nil {
+				fmt.Printf("❌ Failed to list projects: %v\n", err)
 				return errors.Wrapf(err, "failed to list projects")
 			}
 
-			logger.DebugContext(cmd.Context(), "listed projects successfully", slog.Int("count", len(projects)))
+			if len(projects) == 0 {
+				fmt.Println("📭 No projects found")
+				return nil
+			}
+
+			fmt.Printf("📋 Found %d project(s):\n", len(projects))
 			t := table.NewWriter()
 			t.SetOutputMirror(os.Stdout)
 			t.AppendHeader(table.Row{"ID", "Name", "Description", "Kind"})
