@@ -6,8 +6,7 @@
 
 ローカル開発環境には以下のサービスが含まれています：
 
-- **Admin API** (https://localhost:8444) - メインのGo API サーバー
-- **Frontend** (http://localhost:3000) - API テスト用のシンプルなWebインターフェース
+- **Admin API** (http://localhost:8080) - メインのGo API サーバー
 - **PostgreSQL** (localhost:5432) - データベース
 - **Valkey** (localhost:6379) - Redis互換のセッションストレージ
 
@@ -24,8 +23,8 @@
 1. GitHub にて OAuth アプリケーションを作成します
    - Settings > Developer settings > OAuth Apps > New OAuth App
    - Application name: `Tacokumo Admin API (Local)`
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `https://localhost:8444/v1alpha1/auth/callback`
+   - Homepage URL: `http://localhost:8080`
+   - Authorization callback URL: `http://localhost:8080/v1alpha1/auth/callback`
 
 2. Client ID と Client Secret をメモしておきます
 
@@ -53,18 +52,19 @@ vim .env
 ```bash
 GITHUB_CLIENT_ID=your_github_client_id_here
 GITHUB_CLIENT_SECRET=your_github_client_secret_here
+GITHUB_CALLBACK_URL=http://localhost:8080/v1alpha1/auth/callback
 GITHUB_ALLOWED_ORGS=your-org-1,your-org-2
+SESSION_TTL=24h
 ```
 
 ### 3. 開発環境の起動
 
 ```bash
-# すべてのサービスを起動（証明書生成、ビルド、マイグレーション含む）
+# すべてのサービスを起動（ビルド、マイグレーション含む）
 make docker-compose-up
 ```
 
 このコマンドは以下を自動的に実行します：
-- TLS証明書の生成
 - Dockerイメージのビルド
 - すべてのサービスの起動
 - データベースマイグレーションの実行
@@ -76,18 +76,7 @@ make docker-compose-up
 make verify-setup
 ```
 
-## 開発用インターフェースの使用
-
-### Webインターフェース
-
-http://localhost:3000 にアクセスすると、以下の機能を持つ開発用インターフェースが表示されます：
-
-- **サービス状態確認** - API、DB、Redisの状態をリアルタイム監視
-- **認証テスト** - GitHub OAuthログイン/ログアウト
-- **API テスト** - 主要なAPIエンドポイントの動作確認
-- **リクエストログ** - APIリクエストの履歴と結果表示
-
-### APIエンドポイント
+## APIエンドポイント
 
 主要なエンドポイント：
 
@@ -142,7 +131,6 @@ make all
 ```bash
 # 特定のサービスのログを確認
 docker compose logs admin_api
-docker compose logs frontend
 docker compose logs postgresql
 docker compose logs valkey
 
@@ -157,14 +145,7 @@ docker compose exec postgresql psql -U admin_api -d tacokumo_admin_db
 
 ### よくある問題
 
-#### 1. 証明書エラー
-
-```bash
-# 証明書を再生成
-bash scripts/generate-dev-certs.sh
-```
-
-#### 2. データベース接続エラー
+#### 1. データベース接続エラー
 
 ```bash
 # データベースの状態確認
@@ -174,7 +155,7 @@ docker compose logs postgresql
 make migrate
 ```
 
-#### 3. Redis接続エラー
+#### 2. Redis接続エラー
 
 ```bash
 # Valkeyの状態確認
@@ -182,11 +163,10 @@ docker compose logs valkey
 docker compose exec valkey valkey-cli ping
 ```
 
-#### 4. ポート競合
+#### 3. ポート競合
 
 デフォルトポートが使用されている場合：
-- Frontend: 3000番ポート
-- Admin API: 8444番ポート
+- Admin API: 8080番ポート
 - PostgreSQL: 5432番ポート
 - Valkey: 6379番ポート
 
@@ -194,14 +174,14 @@ docker compose exec valkey valkey-cli ping
 
 ```bash
 # macOS/Linux
-lsof -i :3000
-lsof -i :8444
+lsof -i :8080
+lsof -i :5432
 
 # プロセス終了
 kill -9 <PID>
 ```
 
-#### 5. 環境の完全リセット
+#### 4. 環境の完全リセット
 
 ```bash
 # すべてをリセット（データ損失注意）
@@ -232,9 +212,8 @@ docker compose logs --tail=50 admin_api | grep ERROR
 
 ### API テストについて
 
-1. まず http://localhost:3000 でWebインターフェースから基本動作を確認
-2. curl や Postman で詳細なテストを実行
-3. ログはWebインターフェースまたは `docker compose logs` で確認
+1. curl や Postman で API の動作テストを実行
+2. ログは `docker compose logs` で確認
 
 ### データベース操作
 
@@ -258,16 +237,9 @@ Go コードを変更した場合：
 docker compose up -d --build admin_api
 ```
 
-フロントエンドファイルを変更した場合：
-
-```bash
-# フロントエンドのみ再ビルド・再起動
-docker compose up -d --build frontend
-```
 
 ## セキュリティ注意事項
 
-- 開発環境では自己署名証明書を使用しています
 - `.env`ファイルには機密情報が含まれるため、Gitにコミットしないでください
 - 本番環境では異なる設定が必要です
 
